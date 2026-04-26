@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { JobsModule } from './jobs/jobs.module';
 import { IngestionModule } from './ingestion/ingestion.module';
+import { ApplicationsModule } from './applications/applications.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { IngestionModule } from './ingestion/ingestion.module';
     PrismaModule,
     JobsModule,
     IngestionModule,
+    ApplicationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
