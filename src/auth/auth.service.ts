@@ -31,12 +31,14 @@ export class AuthService {
       data: {
         email,
         password: hashedPassword,
+        role: 'user',
       },
     });
 
     return {
       id: user.id,
       email: user.email,
+      role: user.role,
     };
   }
 
@@ -61,10 +63,16 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email,
+      role: user.role,
     };
 
     return {
       access_token: this.jwtService.sign(payload),
+      user: {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      },
     };
   }
 }

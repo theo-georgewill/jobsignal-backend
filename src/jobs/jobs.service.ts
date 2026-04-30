@@ -3,14 +3,38 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { QueryJobsDto } from './dto/query-jobs.dto';
 
+function normalizeUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.origin}${parsed.pathname}`
+      .replace(/\/$/, "")
+      .toLowerCase();
+  } catch {
+    return url.trim().toLowerCase();
+  }
+}
 @Injectable()
 export class JobsService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateJobDto) {
+    const cleanUrl = normalizeUrl(data.url);
+
+    const existing =
+      await this.prisma.job.findFirst({
+        where: {
+          url: cleanUrl,
+        },
+      });
+
+    if (existing) {
+      return existing;
+    }
+
     return this.prisma.job.create({
       data: {
         ...data,
+        url: cleanUrl,
         tags: data.tags || [],
       },
     });
@@ -68,5 +92,37 @@ export class JobsService {
     return this.prisma.job.findUnique({
       where: { id },
     });
+  }
+
+  async removeDuplicates() {
+    const jobs =
+      await this.prisma.job.findMany({
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
+
+    const seen = new Set<string>();
+    let removed = 0;
+
+    for (const job of jobs) {
+      const key = normalizeUrl(job.url);
+
+      if (seen.has(key)) {
+        await this.prisma.job.delete({
+          where: { id: job.id },
+        });
+
+        removed++;
+        continue;
+      }
+
+      seen.add(key);
+    }
+
+    return {
+      message: "Duplicate jobs removed",
+      removed,
+    };
   }
 }
