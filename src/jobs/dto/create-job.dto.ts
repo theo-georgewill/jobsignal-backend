@@ -7,4 +7,6 @@ export class CreateJobDto {
   source!: string;
   description?: string;
   tags?: string[];
+  postedAt?: Date;
+  metadata?: Record<string, any>;
 }

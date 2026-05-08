@@ -2,16 +2,18 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 
 import { JobsService } from '../jobs/jobs.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SignalsService } from '../signals/signals.service';
 
 import { IngestedJob } from './types/jobs.types';
-import { SOURCE_REGISTRY } from './source-registry';
+import { PROVIDER_REGISTRY } from './registry/provider-registry';
 
 @Injectable()
 
 export class IngestionService implements OnModuleInit {
   constructor(
     private jobsService: JobsService,
-    private prisma: PrismaService
+    private prisma: PrismaService,
+    private signalsService: SignalsService
   ) {}
 
   /* =========================================
@@ -81,25 +83,47 @@ export class IngestionService implements OnModuleInit {
       });
 
     try {
-      const [
-        apiJobs,
-        scrapedJobs,
-      ] = await Promise.all([
-        this.ingestAPISources(),
-        this.ingestScrapers(),
-      ]);
+      console.log('STEP 1: Starting provider ingestion');
 
-      const allJobs = [
-        ...apiJobs,
-        ...scrapedJobs,
-      ];
+      const result = await this.ingestAPISources();
 
+      console.log('STEP 2: Providers completed');
+
+      const allJobs = result.jobs;
+      const allSignals = result.signals;
+
+      console.log(
+        `Fetched ${allJobs.length} jobs`
+      );
+
+      console.log(
+        `Fetched ${allSignals.length} signals`
+      );
+
+      console.log('STEP 3: Filtering jobs');
+      
       const filteredJobs =
         this.filterJobs(allJobs);
+
+      console.log(
+        `Filtered to ${filteredJobs.length} remote jobs`
+      );
+
+      console.log('STEP 4: Saving jobs');
 
       await this.saveJobs(
         filteredJobs
       );
+
+      console.log('STEP 5: Jobs saved');
+
+      console.log('STEP 6: Creating signals');
+      
+      await this.signalsService.createMany(
+        allSignals
+      );
+
+      console.log('STEP 7: Signals created');
 
       await this.prisma.ingestionRun.update({
         where: {
@@ -153,12 +177,7 @@ export class IngestionService implements OnModuleInit {
   ========================================= */
 
   async ingestAPISources() {
-    const sources =
-      SOURCE_REGISTRY.filter(
-        (s) =>
-          s.type ===
-          'api'
-      );
+    const sources = PROVIDER_REGISTRY;
 
     const results =
       await Promise.allSettled(
@@ -168,7 +187,8 @@ export class IngestionService implements OnModuleInit {
       );
 
     const jobs: IngestedJob[] = [];
-
+    const signals: any[] = [];
+    
     for (
       let i = 0;
       i < results.length;
@@ -184,9 +204,14 @@ export class IngestionService implements OnModuleInit {
         result.status ===
         'fulfilled'
       ) {
-        jobs.push(
-          ...result.value
-        );
+        const data = result.value;
+
+        const providerJobs = data.jobs ?? [];
+        const providerSignals = data.signals ?? [];
+        
+        jobs.push(...providerJobs);        
+        signals.push(...providerSignals);
+
         await this.prisma.ingestionSource.update(
           {
             where: {
@@ -230,34 +255,10 @@ export class IngestionService implements OnModuleInit {
       }
     }
 
-    return jobs;
+    return { jobs, signals };
   }
 
-  async ingestScrapers() {
-    const sources =
-      SOURCE_REGISTRY.filter(
-        (s) =>
-          s.type ===
-          'scraper'
-      );
-    const results =
-      await Promise.allSettled(
-        sources.map((s) =>
-          s.runner()
-        )
-      );
 
-    return results
-      .filter(
-        (r) =>
-          r.status ===
-          'fulfilled'
-      )
-      .flatMap(
-        (r: any) =>
-          r.value
-      );
-  }
 
   /* =========================================
      FILTER
@@ -457,7 +458,7 @@ export class IngestionService implements OnModuleInit {
     }
 
     const source =
-      SOURCE_REGISTRY.find(
+      PROVIDER_REGISTRY.find(
         (s) =>
           s.name === name
       );
@@ -478,8 +479,8 @@ export class IngestionService implements OnModuleInit {
       });
 
     try {
-      const jobs =
-        await source.runner();
+      const result = await source.runner();
+      const jobs = result.jobs ?? [];
 
       const filtered =
         this.filterJobs(
@@ -612,7 +613,7 @@ export class IngestionService implements OnModuleInit {
   }
 
   async syncSources() {
-    for (const source of SOURCE_REGISTRY) {
+    for (const source of PROVIDER_REGISTRY) {
       await this.prisma.ingestionSource.upsert({
         where: {
           name: source.name,

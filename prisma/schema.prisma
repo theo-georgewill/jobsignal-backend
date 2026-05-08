@@ -16,19 +16,91 @@ model User {
   applications Application[]
 }
 
+model Company {
+  id               String   @id @default(uuid())
+  name             String   @unique
+  website          String?
+  logoUrl          String?
+  careersUrl       String
+  atsType          String
+  tags             String[]
+  enabled          Boolean  @default(true)
+  priority         Int      @default(1)
+  healthy          Boolean  @default(true)
+  lastCheckedAt    DateTime?
+  crawlError       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  jobs             Job[]
+  opportunities    Opportunity[]
+  signals          Signal[] 
+}
+
 model Job {
   id          String   @id @default(uuid())
+
   title       String
-  company     String
+
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+
   location    String?
   remote      Boolean  @default(true)
+
   url         String
   source      String
+
+  externalId  String?
+  hash        String   @unique   // dedupe
+
   description String?
+  descriptionHtml String?
+  metadata    Json?
+
+  postedAt    DateTime?
+
   tags        String[]
+
   createdAt   DateTime @default(now())
 
   applications Application[]
+}
+
+model Signal {
+  id          String   @id @default(uuid())
+
+  type        String
+  title       String
+
+  companyName String?
+  rawCompanyName String? 
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+
+  url         String?
+  source      String
+
+  payload     Json?
+  hash        String   @unique 
+
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@index([type])
+}
+
+model Opportunity {
+  id         String   @id @default(uuid())
+  companyId  String   @unique
+  company    Company  @relation(fields: [companyId], references: [id])
+  score      Int
+  priority   String   @default("low")
+  momentum   String   @default("stable")
+  summary    String?
+  status     String   @default("active")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Application {
@@ -44,6 +116,7 @@ model Application {
   followUpDate    DateTime?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
   user User @relation(fields: [userId], references: [id])
   job  Job? @relation(fields: [jobId], references: [id])
 }
@@ -85,22 +158,6 @@ model IngestionLog {
   sourceName String?
   message    String
   createdAt  DateTime @default(now())
-}
-
-model Company {
-  id               String   @id @default(uuid())
-  name             String   @unique
-  website          String?
-  logoUrl          String?
-  careersUrl       String
-  atsType          String
-  tags             String[]
-  enabled          Boolean  @default(true)
-  priority         Int      @default(1)
-  healthy          Boolean  @default(true)
-  lastCheckedAt    DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
 }
 
 model CompanyLog {

@@ -13,33 +13,26 @@ import { QueryJobsDto } from './dto/query-jobs.dto';
 
 @Controller('jobs')
 export class JobsController {
-  constructor(
-    private jobsService: JobsService
-  ) {}
+  constructor(private jobsService: JobsService) {}
 
   @Post()
-  create(
-    @Body() body: CreateJobDto
-  ) {
+  create(@Body() body: CreateJobDto) {
     return this.jobsService.create(body);
   }
 
   @Get()
-  findAll(
-    @Query() query: QueryJobsDto
-  ) {
+  findAll(@Query() query: QueryJobsDto) {
     return this.jobsService.findAll(query);
   }
 
   @Get(':id')
-  findOne(
-    @Param('id') id: string
-  ) {
+  findOne(@Param('id') id: string) {
     return this.jobsService.findOne(id);
   }
 
-  @Post('cleanup-duplicates')
-  cleanupDuplicates() {
-    return this.jobsService.removeDuplicates();
+  // NEW: important for company pages
+  @Get('company/:companyId')
+  findByCompany(@Param('companyId') companyId: string) {
+    return this.jobsService.findByCompany(companyId);
   }
 }

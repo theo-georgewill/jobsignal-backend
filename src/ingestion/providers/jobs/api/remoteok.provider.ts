@@ -7,7 +7,7 @@ export async function fetchRemoteOKJobs() {
 
   const data = await res.json();
 
-  return data
+  const jobs = data
     .filter((job: any) => job.position)
     .map((job: any) => ({
       title: job.position,
@@ -19,4 +19,8 @@ export async function fetchRemoteOKJobs() {
       description: job.description || '',
       tags: job.tags || [],
     }));
+
+  return {
+    jobs, // ✅ FIX
+  };
 }
