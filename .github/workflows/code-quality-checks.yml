@@ -1,4 +1,4 @@
-name: Backend Tests
+name: Backend Code Quality Checks
 
 on:
   push:
@@ -7,6 +7,8 @@ on:
 
 jobs:
   test:
+    name: Backend Tests
+
     runs-on: ubuntu-latest
 
     steps:
