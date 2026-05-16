@@ -29,76 +29,78 @@ export class SignalsService {
   async createMany(signals: IncomingSignal[]) {
     if (!signals.length) return;
 
-    const limit = pLimit(10); 
-    
+    const limit = pLimit(10);
+
     await Promise.all(
-      signals.map(async (signal) => {
-        const processed = this.processIncoming(signal);
+      signals.map((signal) =>
+        limit(async () => {
+          const processed = this.processIncoming(signal);
 
-        // 🔴 DROP BAD SIGNALS EARLY
-        if (!processed) return;
+          // 🔴 DROP BAD SIGNALS EARLY
+          if (!processed) return;
 
-        const company = await this.jobsService.resolveCompany(
-          processed.companyName
-        );
+          const company = await this.jobsService.resolveCompany(
+            processed.companyName
+          );
 
-        const hash = this.generateHash(processed, processed.companyName);
+          const hash = this.generateHash(processed, processed.companyName);
 
-        let created;
-        let isNew = true;
+          let created;
+          let isNew = true;
 
-        const basePayload =
-          processed.payload &&
-          typeof processed.payload === 'object' &&
-          !Array.isArray(processed.payload)
-            ? processed.payload
-            : {};
+          const basePayload =
+            processed.payload &&
+            typeof processed.payload === 'object' &&
+            !Array.isArray(processed.payload)
+              ? processed.payload
+              : {};
 
-        try {
-          created = await this.prisma.signal.upsert({
-            where: { hash },
-            update: {},
-            create: {
-              type: processed.type,
-              title: processed.title,
-              url: processed.url,
-              source: processed.source,
-              payload: {
-                ...basePayload,
-                score: processed.score,
-                confidence: processed.confidence,
-                amount: processed.amount,
-              },
-              companyId: company.id,
-              companyName: processed.companyName,
-              rawCompanyName: signal.companyName,
-              hash,
-            },
-          });
-        } catch (err: any) {
-          if (err.code === 'P2002') {
-            isNew = false;
-
-            created = await this.prisma.signal.findUnique({
+          try {
+            created = await this.prisma.signal.upsert({
               where: { hash },
+              update: {},
+              create: {
+                type: processed.type,
+                title: processed.title,
+                url: processed.url,
+                source: processed.source,
+                payload: {
+                  ...basePayload,
+                  score: processed.score,
+                  confidence: processed.confidence,
+                  amount: processed.amount,
+                },
+                companyId: company.id,
+                companyName: processed.companyName,
+                rawCompanyName: signal.companyName,
+                hash,
+              },
             });
+          } catch (err: any) {
+            if (err.code === 'P2002') {
+              isNew = false;
 
-            if (!created) {
-              throw new Error(`Signal conflict but not found: ${hash}`);
+              created = await this.prisma.signal.findUnique({
+                where: { hash },
+              });
+
+              if (!created) {
+                throw new Error(`Signal conflict but not found: ${hash}`);
+              }
+            } else {
+              throw err;
             }
-          } else {
-            throw err;
           }
-        }
 
-        if (isNew && processed.score >= 7) {
-          await this.opportunitiesQueue.add('recompute', {
-            companyId: company.id,
-          });
-        }
+          if (isNew && processed.score >= 7) {
+            await this.opportunitiesQueue.add('recompute', {
+              companyId: company.id,
+            });
+          }
 
-        return created;
-      })
+          return created;
+        })
+      )
     );
   }
 
