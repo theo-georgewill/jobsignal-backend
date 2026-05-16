@@ -2,7 +2,7 @@ export async function fetchArbeitnowJobs() {
   const res = await fetch('https://www.arbeitnow.com/api/job-board-api');
   const data = await res.json();
 
-  return data.data.map((job: any) => ({
+  const jobs = data.data.map((job: any) => ({
     title: job.title,
     company: job.company_name,
     location: job.location,
@@ -12,4 +12,8 @@ export async function fetchArbeitnowJobs() {
     description: job.description,
     tags: job.tags || [],
   }));
+
+  return {
+    jobs, // ✅ THIS is the fix
+  };
 }

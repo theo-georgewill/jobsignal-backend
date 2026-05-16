@@ -1,42 +1,79 @@
-import { Injectable } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 
-interface User {
-  id: string;
-  email: string;
-  password: string;
-}
+import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
+import {LoginDto} from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
+  constructor(
+    private prisma: PrismaService,
+    private jwtService: JwtService,
+  ) {}
 
-  private users: User[] = [];
+  async register(dto: RegisterDto) {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
 
-  async register(email: string, password: string) {
-    const hashedPassword = await bcrypt.hash(password, 10);
+    if (existingUser) {
+      throw new BadRequestException('Email already exists');
+    }
 
-    const user = {
-      id: Date.now().toString(), 
-      email, 
-      password: hashedPassword 
-    };
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    this.users.push(user);
-
-    return user;
-  }
-
-  async login(email: string, password: string){
-    const user = this.users.find(user => user.email === email);
-
-    if (!user) throw new Error("User not found");
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) throw new Error("Invalid password");
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        password: hashedPassword,
+        role: 'user',
+      },
+    });
 
     return {
-      access_token: "fake-jwt-for-now",
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    };
+  }
+
+  async login(dto: LoginDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const valid = await bcrypt.compare(
+      dto.password,
+      user.password,
+    );
+
+    if (!valid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
+    return {
+      access_token: this.jwtService.sign(payload),
+      user: {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+      },
     };
   }
 }

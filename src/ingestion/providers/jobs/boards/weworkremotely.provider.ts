@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { IngestedJob } from '../../../types/jobs.types';
 
 export async function scrapeWeWorkRemotely() {
   const res = await fetch('https://weworkremotely.com/remote-jobs');
@@ -6,7 +7,7 @@ export async function scrapeWeWorkRemotely() {
 
   const $ = cheerio.load(html);
 
-  const jobs: any[] = [];
+  const jobs: IngestedJob[] = [];
 
   $('section.jobs li').each((_, el) => {
     const link = $(el).find('a').attr('href');
@@ -29,5 +30,7 @@ export async function scrapeWeWorkRemotely() {
     });
   });
 
-  return jobs;
+  return {
+    jobs, // ✅ FIX
+  };
 }

@@ -10,29 +10,156 @@ model User {
   id           String        @id @default(uuid())
   email        String        @unique
   password     String
+  role         String        @default("user")
   createdAt    DateTime      @default(now())
+
   applications Application[]
 }
 
-model Application {
-  id        String   @id @default(uuid())
-  userId    String
-  jobId     String
-  status    String   @default("saved")
-  notes     String?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+model Company {
+  id               String   @id @default(uuid())
+  name             String   @unique
+  website          String?
+  logoUrl          String?
+  careersUrl       String
+  atsType          String
+  tags             String[]
+  enabled          Boolean  @default(true)
+  priority         Int      @default(1)
+  healthy          Boolean  @default(true)
+  lastCheckedAt    DateTime?
+  crawlError       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  jobs             Job[]
+  opportunities    Opportunity[]
+  signals          Signal[] 
 }
 
 model Job {
   id          String   @id @default(uuid())
   title       String
-  company     String
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
   location    String?
   remote      Boolean  @default(true)
   url         String
   source      String
+  externalId  String?
+  hash        String   @unique   // dedupe
   description String?
+  descriptionHtml String?
+  workMode String? // onsite, remote, hybrid
+  employmentType String?
+  salaryMin      Int?
+  salaryMax      Int?
+  salaryCurrency String? @default("USD")
+  salaryPeriod   String? // yearly, monthly, hourly
+  metadata    Json?
+  postedAt    DateTime?
   tags        String[]
+  createdAt   DateTime @default(now())
+  applications Application[]
+}
+
+model Signal {
+  id          String   @id @default(uuid())
+
+  type        String
+  title       String
+
+  companyName String?
+  rawCompanyName String? 
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+
+  url         String?
+  source      String
+
+  payload     Json?
+  hash        String   @unique 
+
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@index([type])
+}
+
+model Opportunity {
+  id         String   @id @default(uuid())
+  companyId  String   @unique
+  company    Company  @relation(fields: [companyId], references: [id])
+  score      Int
+  priority   String   @default("low")
+  momentum   String   @default("stable")
+  summary    String?
+  status     String   @default("active")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Application {
+  id              String   @id @default(uuid())
+  userId          String
+  jobId           String?
+  externalTitle   String?
+  externalCompany String?
+  source          String
+  status          String   @default("saved")
+  notes           String?
+  appliedAt       DateTime @default(now())
+  followUpDate    DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+  job  Job? @relation(fields: [jobId], references: [id])
+}
+
+model IngestionEngine {
+  id         String   @id @default(uuid())
+  paused     Boolean  @default(false)
+  running    Boolean  @default(false)
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
+}
+
+model IngestionSource {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  type        String
+  enabled     Boolean  @default(true)
+  healthy     Boolean  @default(true)
+  lastRunAt   DateTime?
+  successRate Int      @default(100)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model IngestionRun {
+  id          String   @id @default(uuid())
+  sourceName  String?
+  status      String
+  fetched     Int      @default(0)
+  saved       Int      @default(0)
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+  message     String?
+}
+
+model IngestionLog {
+  id         String   @id @default(uuid())
+  level      String
+  sourceName String?
+  message    String
+  createdAt  DateTime @default(now())
+}
+
+model CompanyLog {
+  id          String   @id @default(uuid())
+  companyId   String
+  level       String
+  message     String
   createdAt   DateTime @default(now())
 }
