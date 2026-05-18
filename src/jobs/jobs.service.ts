@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateJobDto } from './dto/create-job.dto';
 import { QueryJobsDto } from './dto/query-jobs.dto';
 import * as crypto from 'crypto';
+import { Prisma } from '@prisma/client';
 
 function normalizeUrl(url: string) {
   try {
@@ -35,31 +36,105 @@ export class JobsService {
 
     return this.prisma.job.upsert({
       where: { hash },
-      update: {
-        title: data.title,
-        location: data.location,
-        remote: data.remote ?? true,
-        url: cleanUrl,
-        source: data.source,
-        description: data.description,
-        tags: data.tags || [],
-        postedAt: data.postedAt,
-        metadata: data.metadata,
-        companyId: company.id,
-      },
-      create: {
-        title: data.title,
-        location: data.location,
-        remote: data.remote ?? true,
-        url: cleanUrl,
-        source: data.source,
-        description: data.description,
-        tags: data.tags || [],
-        postedAt: data.postedAt,
-        metadata: data.metadata,
-        companyId: company.id,
-        hash,
-      },
+update: {
+  title: data.title,
+
+  location: data.location,
+
+  remote: data.remote ?? true,
+
+  workMode: data.workMode,
+
+  employmentType:
+    data.employmentType,
+
+  url: cleanUrl,
+
+  source: data.source,
+
+  externalId:
+    data.externalId,
+
+  description:
+    data.description,
+
+  descriptionHtml:
+    data.descriptionHtml,
+
+  salaryMin:
+    data.salaryMin,
+
+  salaryMax:
+    data.salaryMax,
+
+  salaryCurrency:
+    data.salaryCurrency,
+
+  salaryPeriod:
+    data.salaryPeriod,
+
+  tags: data.tags || [],
+
+  postedAt:
+    data.postedAt,
+
+
+metadata:
+  data.metadata as Prisma.InputJsonValue,
+  companyId:
+    company.id,
+},
+
+create: {
+  title: data.title,
+
+  location: data.location,
+
+  remote: data.remote ?? true,
+
+  workMode: data.workMode,
+
+  employmentType:
+    data.employmentType,
+
+  url: cleanUrl,
+
+  source: data.source,
+
+  externalId:
+    data.externalId,
+
+  description:
+    data.description,
+
+  descriptionHtml:
+    data.descriptionHtml,
+
+  salaryMin:
+    data.salaryMin,
+
+  salaryMax:
+    data.salaryMax,
+
+  salaryCurrency:
+    data.salaryCurrency,
+
+  salaryPeriod:
+    data.salaryPeriod,
+
+  tags: data.tags || [],
+
+  postedAt:
+    data.postedAt,
+
+  metadata:
+    data.metadata,
+
+  companyId:
+    company.id,
+
+  hash,
+},
     });
   }
 

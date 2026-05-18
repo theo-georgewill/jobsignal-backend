@@ -19,6 +19,13 @@ model User {
 model Company {
   id               String   @id @default(uuid())
   name             String   @unique
+  description String?
+  industry    String?
+  size        String?
+  country     String?
+  linkedinUrl String?
+  twitterUrl  String?
+  verified    Boolean @default(false)
   website          String?
   logoUrl          String?
   careersUrl       String
@@ -61,6 +68,10 @@ model Job {
   tags        String[]
   createdAt   DateTime @default(now())
   applications Application[]
+
+  @@index([companyId])
+  @@index([postedAt])
+  @@index([remote])
 }
 
 model Signal {
@@ -86,17 +97,60 @@ model Signal {
   @@index([type])
 }
 
+enum OpportunityType {
+  JOB
+  INTERNSHIP
+  GRANT
+  FELLOWSHIP
+  SCHOLARSHIP
+  HACKATHON
+  ACCELERATOR
+  CONTRACT
+}
+
+enum OpportunityPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum OpportunityMomentum {
+  STABLE
+  RISING
+  TRENDING
+}
+
+enum OpportunityStatus {
+  ACTIVE
+  EXPIRED
+  CLOSED
+}
 model Opportunity {
-  id         String   @id @default(uuid())
-  companyId  String   @unique
-  company    Company  @relation(fields: [companyId], references: [id])
-  score      Int
-  priority   String   @default("low")
-  momentum   String   @default("stable")
-  summary    String?
-  status     String   @default("active")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String   @id @default(uuid())
+
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id])
+  title       String
+  type        OpportunityType
+  description String?
+  url         String?
+  source      String?
+  externalId  String?
+  hash        String   @unique
+  location    String?
+  remote      Boolean @default(false)
+  score       Int      @default(0)
+  priority    OpportunityPriority @default(LOW)
+  momentum    OpportunityMomentum @default(STABLE)
+  status      OpportunityStatus @default(ACTIVE)
+  opensAt     DateTime?
+  closesAt    DateTime?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([companyId])
+  @@index([type])
+  @@index([status])
 }
 
 model Application {

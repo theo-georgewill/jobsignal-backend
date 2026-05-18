@@ -1,44 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-
-function extractDomain(
-  url?: string | null
-): string | null {
-  if (!url) return null;
-
-  try {
-    return new URL(
-      url.startsWith('http')
-        ? url
-        : `https://${url}`
-    ).hostname.replace(
-      'www.',
-      ''
-    );
-  } catch {
-    return url
-      .replace(
-        /^https?:\/\//,
-        ''
-      )
-      .replace(
-        /^www\./,
-        ''
-      )
-      .split('/')[0];
-  }
-}
-
-function getLogoUrl(
-  website?: string | null
-): string | null {
-  const domain =
-    extractDomain(website);
-
-  if (!domain) return null;
-
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-}
+import {
+  getLogoUrl,
+  normalizeCompanyName,
+} from '../common/utils/company.util';
+import { CreateCompanyDto } from './dto/create-company.dto';
+import { UpdateCompanyDto } from './dto/update-company.dto';
 
 @Injectable()
 export class CompanyService {
@@ -60,10 +27,15 @@ export class CompanyService {
     });
   }
 
-  create(data: any) {
+  create(data: CreateCompanyDto) {
+    const normalizedName =
+      normalizeCompanyName(
+        data.name,
+      );
     return this.prisma.company.create({
       data: {
         ...data,
+        name: normalizedName,
         logoUrl:
           getLogoUrl(
             data.website
@@ -74,12 +46,17 @@ export class CompanyService {
 
   update(
     id: string,
-    data: any
+    data: UpdateCompanyDto
   ) {
     return this.prisma.company.update({
       where: { id },
       data: {
         ...data,
+        name: data.name
+          ? normalizeCompanyName(
+              data.name,
+            )
+          : undefined,
         logoUrl:
           getLogoUrl(
             data.website
@@ -108,17 +85,24 @@ export class CompanyService {
   }
 
   async bulkImport(
-    rows: any[]
+    rows: CreateCompanyDto[]
   ) {
     let created = 0;
 
     for (const row of rows) {
+      const normalizedName =
+        normalizeCompanyName(
+          row.name,
+        );
+
       await this.prisma.company.upsert({
         where: {
-          name: row.name,
+          name: normalizedName,
         },
 
         update: {
+          name: 
+            normalizedName,
           website:
             row.website,
           careersUrl:
@@ -137,7 +121,7 @@ export class CompanyService {
         },
 
         create: {
-          name: row.name,
+          name: normalizedName,
           website:
             row.website,
           careersUrl:

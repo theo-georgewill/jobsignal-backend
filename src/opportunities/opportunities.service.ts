@@ -22,43 +22,70 @@ export class OpportunitiesService {
 
     return opportunities.map((o) => ({
       id: o.id,
+
+      title: o.title,
+      type: o.type,
+
       companyId: o.companyId,
       companyName: o.company.name,
+
       logo: o.company.logoUrl,
+
       tags: o.company.tags,
+
+      remote: o.remote,
+      location: o.location,
 
       score: o.score,
       priority: o.priority,
       momentum: o.momentum,
-      summary: o.summary,
+
+      url: o.url,
+
+      createdAt: o.createdAt,
     }));
   }
 
   /* =========================================
-     GET ONE COMPANY OPPORTUNITY
+     GET COMPANY OPPORTUNITIES
   ========================================= */
 
   async findByCompany(companyId: string) {
-    const o = await this.prisma.opportunity.findUnique({
+    const opportunities = await this.prisma.opportunity.findMany({
       where: { companyId },
+
       include: {
         company: true,
       },
+
+      orderBy: {
+        score: 'desc',
+      },
     });
 
-    if (!o) return null;
-
-    return {
+    return opportunities.map((o) => ({
       id: o.id,
+
+      title: o.title,
+      type: o.type,
+
       companyId: o.companyId,
       companyName: o.company.name,
+
       logo: o.company.logoUrl,
+
       tags: o.company.tags,
+
+      remote: o.remote,
+      location: o.location,
 
       score: o.score,
       priority: o.priority,
       momentum: o.momentum,
-      summary: o.summary,
-    };
+
+      url: o.url,
+
+      createdAt: o.createdAt,
+    }));
   }
 }
