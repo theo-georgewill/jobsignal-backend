@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Company" ALTER COLUMN "careersUrl" DROP NOT NULL,
+ALTER COLUMN "atsType" DROP NOT NULL;

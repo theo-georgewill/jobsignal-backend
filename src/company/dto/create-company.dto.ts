@@ -27,19 +27,22 @@ export class CreateCompanyDto {
   @IsUrl()
   logoUrl?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsUrl()
-  careersUrl!: string;
+  careersUrl?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  atsType!: string;
+  atsType?: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: [String],
   })
+  @IsOptional()
   @IsArray()
-  tags!: string[];
+  tags?: string[];
 
   @ApiPropertyOptional()
   @IsOptional()
