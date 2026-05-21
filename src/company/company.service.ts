@@ -6,11 +6,13 @@ import {
 } from '../common/utils/company.util';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
+import { CompanyQueue } from '../queues/company.queue';
 
 @Injectable()
 export class CompanyService {
   constructor(
-    private prisma: PrismaService
+    private prisma: PrismaService,
+    private companyQueue: CompanyQueue,
   ) {}
 
   findAll() {
@@ -27,28 +29,28 @@ export class CompanyService {
     });
   }
 
-  create(data: CreateCompanyDto) {
+  async create(data: CreateCompanyDto) {
     const normalizedName =
       normalizeCompanyName(
         data.name,
       );
-    return this.prisma.company.create({
+    const company = await this.prisma.company.create({
       data: {
         ...data,
         name: normalizedName,
-        logoUrl:
-          getLogoUrl(
-            data.website
-          ),
       },
     });
+    await this.companyQueue.enrich(
+      company.id,
+    );
+    return company;
   }
 
-  update(
+  async update(
     id: string,
     data: UpdateCompanyDto
   ) {
-    return this.prisma.company.update({
+    const company = await this.prisma.company.update({
       where: { id },
       data: {
         ...data,
@@ -57,12 +59,14 @@ export class CompanyService {
               data.name,
             )
           : undefined,
-        logoUrl:
-          getLogoUrl(
-            data.website
-          ),
       },
     });
+
+    await this.companyQueue.enrich(
+      company.id,
+    );
+
+    return company;
   }
 
   remove(id: string) {
@@ -95,52 +99,49 @@ export class CompanyService {
           row.name,
         );
 
-      await this.prisma.company.upsert({
-        where: {
-          name: normalizedName,
-        },
+      const company = 
+        await this.prisma.company.upsert({
+          where: {
+            name: normalizedName,
+          },
 
-        update: {
-          name: 
-            normalizedName,
-          website:
-            row.website,
-          careersUrl:
-            row.careersUrl,
-          atsType:
-            row.atsType,
-          priority:
-            Number(
-              row.priority ||
-                1
-            ),
-          logoUrl:
-            getLogoUrl(
-              row.website
-            ),
-        },
+          update: {
+            name: 
+              normalizedName,
+            website:
+              row.website,
+            careersUrl:
+              row.careersUrl,
+            atsType:
+              row.atsType,
+            priority:
+              Number(
+                row.priority ||
+                  1
+              ),
+          },
 
-        create: {
-          name: normalizedName,
-          website:
-            row.website,
-          careersUrl:
-            row.careersUrl,
-          atsType:
-            row.atsType,
-          enabled: true,
-          healthy: true,
-          priority:
-            Number(
-              row.priority ||
-                1
-            ),
-          logoUrl:
-            getLogoUrl(
-              row.website
-            ),
-        },
-      });
+          create: {
+            name: normalizedName,
+            website:
+              row.website,
+            careersUrl:
+              row.careersUrl,
+            atsType:
+              row.atsType,
+            enabled: true,
+            healthy: true,
+            priority:
+              Number(
+                row.priority ||
+                  1
+              ),
+          },
+        });
+
+      await this.companyQueue.enrich(
+        company.id,
+      );
 
       created++;
     }
@@ -150,6 +151,60 @@ export class CompanyService {
         'Import complete',
       count: created,
     };
+  }
+
+  async reenrichAll() {
+    const companies =
+      await this.prisma.company.findMany({
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+    for (const company of companies) {
+      await this.companyQueue.enrich(
+        company.id,
+      );
+    }
+
+    return {
+      message:
+        'Re-enrichment queued',
+      count: companies.length,
+    };
+  }
+
+  async findCompanyPage(id: string) {
+    return this.prisma.company.findUnique({
+      where: { id },
+
+      include: {
+        jobs: {
+          orderBy: {
+            postedAt: 'desc',
+          },
+
+          take: 20,
+        },
+
+        opportunities: {
+          orderBy: {
+            score: 'desc',
+          },
+
+          take: 20,
+        },
+
+        signals: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+
+          take: 20,
+        },
+      },
+    });
   }
 
   async run(id: string) {
@@ -184,32 +239,15 @@ export class CompanyService {
       },
     });
 
+    await this.companyQueue.enrich(
+      company.id,
+    );
+
     return {
       message:
         'Run completed',
       company:
         company.name,
-    };
-  }
-
-  async refreshAllLogos() {
-    const companies =
-      await this.prisma.company.findMany();
-
-    for (const company of companies) {
-      await this.prisma.company.update({
-        where: { id: company.id },
-        data: {
-          logoUrl: getLogoUrl(
-            company.website
-          ),
-        },
-      });
-    }
-
-    return {
-      message: 'Logos refreshed',
-      count: companies.length,
     };
   }
 }

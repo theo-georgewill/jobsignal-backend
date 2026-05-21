@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { JobsService } from '../jobs/jobs.service';
+import { CompanyResolutionService } from '../company/services/company-resolution.service';
 import { normalizeCompanyName } from '../ingestion/utils/company-normalizer';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -21,7 +21,7 @@ interface IncomingSignal {
 export class SignalsService {
   constructor(
     private prisma: PrismaService,
-    private jobsService: JobsService,
+    private companyResolutionService: CompanyResolutionService,
     @InjectQueue('opportunities')
     private opportunitiesQueue: Queue
   ) {}
@@ -39,9 +39,9 @@ export class SignalsService {
           // 🔴 DROP BAD SIGNALS EARLY
           if (!processed) return;
 
-          const company = await this.jobsService.resolveCompany(
-            processed.companyName
-          );
+          const company = await this.companyResolutionService.resolve({
+            name: processed.companyName
+          });
 
           const hash = this.generateHash(processed, processed.companyName);
 

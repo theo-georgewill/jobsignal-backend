@@ -4,7 +4,7 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { QueryJobsDto } from './dto/query-jobs.dto';
 import * as crypto from 'crypto';
 import { Prisma } from '@prisma/client';
-
+import { CompanyResolutionService } from '../company/services/company-resolution.service';
 function normalizeUrl(url: string) {
   try {
     const parsed = new URL(url);
@@ -18,7 +18,10 @@ function normalizeUrl(url: string) {
 
 @Injectable()
 export class JobsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private companyResolutionService: CompanyResolutionService
+  ) {}
   
   /* =========================================
      CREATE (UPSERT WITH COMPANY + HASH)
@@ -27,7 +30,10 @@ export class JobsService {
   async create(data: CreateJobDto) {
     const cleanUrl = normalizeUrl(data.url);
 
-    const company = await this.resolveCompany(data.company);
+    const company =
+      await this.companyResolutionService.resolve({
+        name: data.company,
+      });
 
     const hash = this.generateHash({
       ...data,
@@ -36,155 +42,108 @@ export class JobsService {
 
     return this.prisma.job.upsert({
       where: { hash },
-update: {
-  title: data.title,
+      update: {
+        title: data.title,
 
-  location: data.location,
+        location: data.location,
 
-  remote: data.remote ?? true,
+        remote: data.remote ?? true,
 
-  workMode: data.workMode,
+        workMode: data.workMode,
 
-  employmentType:
-    data.employmentType,
+        employmentType:
+          data.employmentType,
 
-  url: cleanUrl,
+        url: cleanUrl,
 
-  source: data.source,
+        source: data.source,
 
-  externalId:
-    data.externalId,
+        externalId:
+          data.externalId,
 
-  description:
-    data.description,
+        description:
+          data.description,
 
-  descriptionHtml:
-    data.descriptionHtml,
+        descriptionHtml:
+          data.descriptionHtml,
 
-  salaryMin:
-    data.salaryMin,
+        salaryMin:
+          data.salaryMin,
 
-  salaryMax:
-    data.salaryMax,
+        salaryMax:
+          data.salaryMax,
 
-  salaryCurrency:
-    data.salaryCurrency,
+        salaryCurrency:
+          data.salaryCurrency,
 
-  salaryPeriod:
-    data.salaryPeriod,
+        salaryPeriod:
+          data.salaryPeriod,
 
-  tags: data.tags || [],
+        tags: data.tags || [],
 
-  postedAt:
-    data.postedAt,
+        postedAt:
+          data.postedAt,
 
 
-metadata:
-  data.metadata as Prisma.InputJsonValue,
-  companyId:
-    company.id,
-},
+      metadata:
+        data.metadata as Prisma.InputJsonValue,
+        companyId:
+          company.id,
+      },
+      create: {
+        title: data.title,
 
-create: {
-  title: data.title,
+        location: data.location,
 
-  location: data.location,
+        remote: data.remote ?? true,
 
-  remote: data.remote ?? true,
+        workMode: data.workMode,
 
-  workMode: data.workMode,
+        employmentType:
+          data.employmentType,
 
-  employmentType:
-    data.employmentType,
+        url: cleanUrl,
 
-  url: cleanUrl,
+        source: data.source,
 
-  source: data.source,
+        externalId:
+          data.externalId,
 
-  externalId:
-    data.externalId,
+        description:
+          data.description,
 
-  description:
-    data.description,
+        descriptionHtml:
+          data.descriptionHtml,
 
-  descriptionHtml:
-    data.descriptionHtml,
+        salaryMin:
+          data.salaryMin,
 
-  salaryMin:
-    data.salaryMin,
+        salaryMax:
+          data.salaryMax,
 
-  salaryMax:
-    data.salaryMax,
+        salaryCurrency:
+          data.salaryCurrency,
 
-  salaryCurrency:
-    data.salaryCurrency,
+        salaryPeriod:
+          data.salaryPeriod,
 
-  salaryPeriod:
-    data.salaryPeriod,
+        tags: data.tags || [],
 
-  tags: data.tags || [],
+        postedAt:
+          data.postedAt,
 
-  postedAt:
-    data.postedAt,
+        metadata:
+          data.metadata,
 
-  metadata:
-    data.metadata,
+        companyId:
+          company.id,
 
-  companyId:
-    company.id,
-
-  hash,
-},
+        hash,
+      },
     });
   }
 
-  /* =========================================
-     COMPANY RESOLUTION
-  ========================================= */
 
-  async resolveCompany(name?: string) {
-    const normalized =
-      name && name.trim() !== ''
-        ? this.normalizeCompanyName(name)
-        : 'unknown';
-
-    try {
-      return await this.prisma.company.upsert({
-        where: { name: normalized },
-        update: {},
-        create: {
-          name: normalized,
-          careersUrl: '',
-          atsType: 'unknown',
-          tags: [],
-        },
-      });
-    } catch (err: any) {
-      if (err.code === 'P2002') {
-        const existing = await this.prisma.company.findUnique({
-          where: { name: normalized },
-        });
-
-        if (!existing) {
-          throw new Error(
-            `Company resolution failed after conflict: ${normalized}`
-          );
-        }
-
-        return existing;
-      }
-
-      throw err;
-    }
-  }
-
-  normalizeCompanyName(name: string) {
-    return name
-      .toLowerCase()
-      .replace(/inc\.?|ltd\.?|llc/g, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
 
   /* =========================================
      HASH (DEDUP STRATEGY)

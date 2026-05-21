@@ -70,6 +70,42 @@ export class CompanyController {
     return this.service.logs(id);
   }
 
+  @Get(':id/page')
+  @ApiOperation({
+    summary:
+      'Get company intelligence page',
+  })
+  @ApiParam({
+    name: 'id',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Company page data retrieved successfully',
+  })
+  findCompanyPage(
+    @Param('id') id: string,
+  ) {
+    return this.service.findCompanyPage(
+      id,
+    );
+  }
+  
+  @Post('reenrich')
+  @ApiOperation({
+    summary:
+      'Re-enrich all companies',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Re-enrichment queued',
+  })
+  reenrichAll() {
+    return this.service.reenrichAll();
+  }
+
   @Post(':id/run')
   @ApiOperation({
     summary: 'Run company ingestion',
@@ -176,15 +212,4 @@ export class CompanyController {
     );
   }
 
-  @Post('refresh-logos')
-  @ApiOperation({
-    summary: 'Refresh company logos',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Logo refresh triggered',
-  })
-  refreshLogos() {
-    return this.service.refreshAllLogos();
-  }
 }
