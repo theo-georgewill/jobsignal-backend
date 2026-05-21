@@ -36,9 +36,7 @@ export async function fetchTechCabalSignals(): Promise<IngestionResult> {
       type: detected.type,
       title,
       companyName: detected.companyName,
-      url: link.startsWith('http')
-        ? link
-        : `https://techcabal.com${link}`,
+      url: link.startsWith('http') ? link : `https://techcabal.com${link}`,
       source: 'techcabal',
     });
   });

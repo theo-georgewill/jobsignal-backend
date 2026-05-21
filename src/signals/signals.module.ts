@@ -10,7 +10,11 @@ import { CompanyModule } from '../company/company.module';
   imports: [
     BullModule.registerQueue({
       name: 'opportunities',
-    }),PrismaModule, JobsModule, CompanyModule],
+    }),
+    PrismaModule,
+    JobsModule,
+    CompanyModule,
+  ],
   controllers: [SignalsController],
   providers: [SignalsService],
   exports: [SignalsService],

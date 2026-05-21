@@ -1,18 +1,6 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 
-import {
-  ApiParam,
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiParam, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 import { JobsService } from './jobs.service';
 
@@ -20,8 +8,6 @@ import { CreateJobDto } from './dto/create-job.dto';
 import { QueryJobsDto } from './dto/query-jobs.dto';
 
 import { JobResponseDto } from './dto/job-response.dto';
-
-
 
 @ApiTags('Jobs')
 @Controller('jobs')
@@ -83,5 +69,4 @@ export class JobsController {
   findOne(@Param('id') id: string) {
     return this.jobsService.findOne(id);
   }
-
 }

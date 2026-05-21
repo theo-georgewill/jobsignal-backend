@@ -7,15 +7,11 @@ import type { Queue } from 'bull';
 @Injectable()
 export class OpportunitiesQueue {
   constructor(
-    @InjectQueue(
-      'opportunities'
-    )
-    private queue: Queue
+    @InjectQueue('opportunities')
+    private queue: Queue,
   ) {}
 
-  async recomputeCompany(
-    companyId: string
-  ) {
+  async recomputeCompany(companyId: string) {
     await this.queue.add(
       'recompute-company',
       {
@@ -25,7 +21,7 @@ export class OpportunitiesQueue {
         removeOnComplete: true,
 
         attempts: 3,
-      }
+      },
     );
   }
 }

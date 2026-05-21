@@ -10,7 +10,7 @@ import { fetchRemoteOKJobs } from '../providers/jobs/api/remoteok.provider';
 import { scrapeWeWorkRemotely } from '../providers/jobs/boards/weworkremotely.provider';
 import { scrapeJSGuruJobs } from '../providers/jobs/boards/jsgurujobs.provider';
 
-// SIGNAL PROVIDERS 
+// SIGNAL PROVIDERS
 import { fetchTechCrunchSignals } from '../providers/signals/techcrunch.provider';
 import { fetchTechCabalSignals } from '../providers/signals/techcabal.provider';
 import { fetchTechpointSignals } from '../providers/signals/techpoint.provider';
@@ -66,13 +66,12 @@ export const PROVIDER_REGISTRY: Provider[] = [
     runner: fetchTechpointSignals,
   },
 
-
   // =========================
   // CAREER PAGE PROVIDERS
   // =========================
   {
     name: 'greenhouse',
-    type: 'careers', 
+    type: 'careers',
     runner: fetchGreenhouseJobs,
   },
-];    
+];

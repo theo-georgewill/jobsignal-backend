@@ -6,27 +6,14 @@ import {
 } from '@nestjs/common';
 
 @Injectable()
-export class AdminGuard
-  implements CanActivate
-{
-  canActivate(
-    context: ExecutionContext
-  ): boolean {
-    const request =
-      context
-        .switchToHttp()
-        .getRequest();
+export class AdminGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
 
-    const user =
-      request.user;
+    const user = request.user;
 
-    if (
-      user?.role !==
-      'admin'
-    ) {
-      throw new ForbiddenException(
-        'Admins only'
-      );
+    if (user?.role !== 'admin') {
+      throw new ForbiddenException('Admins only');
     }
 
     return true;

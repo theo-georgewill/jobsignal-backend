@@ -14,7 +14,7 @@ export async function fetchGreenhouseJobs() {
   for (const company of companies) {
     try {
       const res = await fetch(
-        `https://boards-api.greenhouse.io/v1/boards/${company.boardToken}/jobs`
+        `https://boards-api.greenhouse.io/v1/boards/${company.boardToken}/jobs`,
       );
 
       if (!res.ok) continue;

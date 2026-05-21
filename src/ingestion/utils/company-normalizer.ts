@@ -7,7 +7,7 @@ export function normalizeCompanyName(input: string): string {
   // remove suffixes
   name = name.replace(
     /\b(inc|incorporated|ltd|limited|corp|corporation|company|co)\b/g,
-    ''
+    '',
   );
 
   // normalize whitespace

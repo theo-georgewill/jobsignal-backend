@@ -20,9 +20,9 @@ function normalizeUrl(url: string) {
 export class JobsService {
   constructor(
     private prisma: PrismaService,
-    private companyResolutionService: CompanyResolutionService
+    private companyResolutionService: CompanyResolutionService,
   ) {}
-  
+
   /* =========================================
      CREATE (UPSERT WITH COMPANY + HASH)
   ========================================= */
@@ -30,15 +30,17 @@ export class JobsService {
   async create(data: CreateJobDto) {
     const cleanUrl = normalizeUrl(data.url);
 
-    const company =
-      await this.companyResolutionService.resolve({
-        name: data.company,
-      });
+    const company = await this.companyResolutionService.resolve({
+      name: data.company,
+    });
 
-    const hash = this.generateHash({
-      ...data,
-      url: cleanUrl,
-    }, company.id);
+    const hash = this.generateHash(
+      {
+        ...data,
+        url: cleanUrl,
+      },
+      company.id,
+    );
 
     return this.prisma.job.upsert({
       where: { hash },
@@ -51,44 +53,32 @@ export class JobsService {
 
         workMode: data.workMode,
 
-        employmentType:
-          data.employmentType,
+        employmentType: data.employmentType,
 
         url: cleanUrl,
 
         source: data.source,
 
-        externalId:
-          data.externalId,
+        externalId: data.externalId,
 
-        description:
-          data.description,
+        description: data.description,
 
-        descriptionHtml:
-          data.descriptionHtml,
+        descriptionHtml: data.descriptionHtml,
 
-        salaryMin:
-          data.salaryMin,
+        salaryMin: data.salaryMin,
 
-        salaryMax:
-          data.salaryMax,
+        salaryMax: data.salaryMax,
 
-        salaryCurrency:
-          data.salaryCurrency,
+        salaryCurrency: data.salaryCurrency,
 
-        salaryPeriod:
-          data.salaryPeriod,
+        salaryPeriod: data.salaryPeriod,
 
         tags: data.tags || [],
 
-        postedAt:
-          data.postedAt,
+        postedAt: data.postedAt,
 
-
-      metadata:
-        data.metadata as Prisma.InputJsonValue,
-        companyId:
-          company.id,
+        metadata: data.metadata as Prisma.InputJsonValue,
+        companyId: company.id,
       },
       create: {
         title: data.title,
@@ -99,51 +89,38 @@ export class JobsService {
 
         workMode: data.workMode,
 
-        employmentType:
-          data.employmentType,
+        employmentType: data.employmentType,
 
         url: cleanUrl,
 
         source: data.source,
 
-        externalId:
-          data.externalId,
+        externalId: data.externalId,
 
-        description:
-          data.description,
+        description: data.description,
 
-        descriptionHtml:
-          data.descriptionHtml,
+        descriptionHtml: data.descriptionHtml,
 
-        salaryMin:
-          data.salaryMin,
+        salaryMin: data.salaryMin,
 
-        salaryMax:
-          data.salaryMax,
+        salaryMax: data.salaryMax,
 
-        salaryCurrency:
-          data.salaryCurrency,
+        salaryCurrency: data.salaryCurrency,
 
-        salaryPeriod:
-          data.salaryPeriod,
+        salaryPeriod: data.salaryPeriod,
 
         tags: data.tags || [],
 
-        postedAt:
-          data.postedAt,
+        postedAt: data.postedAt,
 
-        metadata:
-          data.metadata,
+        metadata: data.metadata,
 
-        companyId:
-          company.id,
+        companyId: company.id,
 
         hash,
       },
     });
   }
-
-
 
   /* =========================================
      HASH (DEDUP STRATEGY)
@@ -185,7 +162,9 @@ export class JobsService {
           ? {
               OR: [
                 { title: { contains: role, mode: 'insensitive' as const } },
-                { description: { contains: role, mode: 'insensitive' as const } },
+                {
+                  description: { contains: role, mode: 'insensitive' as const },
+                },
               ],
             }
           : {},

@@ -55,24 +55,20 @@ export class OpportunitiesProcessor extends WorkerHost {
     const now = Date.now();
 
     const recentSignals = uniqueSignals.filter((s) => {
-      const hours =
-        (now - s.createdAt.getTime()) / (1000 * 60 * 60);
+      const hours = (now - s.createdAt.getTime()) / (1000 * 60 * 60);
 
       return hours <= 72;
     });
 
     const olderSignals = uniqueSignals.filter((s) => {
-      const hours =
-        (now - s.createdAt.getTime()) / (1000 * 60 * 60);
+      const hours = (now - s.createdAt.getTime()) / (1000 * 60 * 60);
 
       return hours > 72;
     });
 
-    const momentumScore =
-      recentSignals.length - olderSignals.length;
+    const momentumScore = recentSignals.length - olderSignals.length;
 
-    let momentum: 'TRENDING' | 'RISING' | 'STABLE' =
-      'STABLE';
+    let momentum: 'TRENDING' | 'RISING' | 'STABLE' = 'STABLE';
 
     if (momentumScore > 2) {
       momentum = 'TRENDING';
@@ -87,8 +83,7 @@ export class OpportunitiesProcessor extends WorkerHost {
     const counts: Record<string, number> = {};
 
     for (const signal of uniqueSignals) {
-      counts[signal.type] =
-        (counts[signal.type] || 0) + 1;
+      counts[signal.type] = (counts[signal.type] || 0) + 1;
     }
 
     /* =========================================
@@ -104,22 +99,17 @@ export class OpportunitiesProcessor extends WorkerHost {
     let score = 0;
 
     for (const signal of uniqueSignals) {
-      const weight =
-        SIGNAL_WEIGHTS[signal.type] ?? 0;
+      const weight = SIGNAL_WEIGHTS[signal.type] ?? 0;
 
       const ageHours =
-        (Date.now() - signal.createdAt.getTime()) /
-        (1000 * 60 * 60);
+        (Date.now() - signal.createdAt.getTime()) / (1000 * 60 * 60);
 
       let multiplier = 1;
 
       if (ageHours > 24) {
         const days = ageHours / 24;
 
-        multiplier = Math.max(
-          0.3,
-          1 - (days - 1) / 6,
-        );
+        multiplier = Math.max(0.3, 1 - (days - 1) / 6);
       }
 
       score += weight * multiplier;
@@ -131,8 +121,7 @@ export class OpportunitiesProcessor extends WorkerHost {
        PRIORITY
     ========================================= */
 
-    let priority: 'HIGH' | 'MEDIUM' | 'LOW' =
-      'LOW';
+    let priority: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
 
     if (score >= 80) {
       priority = 'HIGH';
@@ -147,34 +136,25 @@ export class OpportunitiesProcessor extends WorkerHost {
     const explanation: string[] = [];
 
     if (counts.funding) {
-      explanation.push(
-        `Funding (${counts.funding})`,
-      );
+      explanation.push(`Funding (${counts.funding})`);
     }
 
     if (counts.hiring) {
-      explanation.push(
-        `Hiring (${counts.hiring})`,
-      );
+      explanation.push(`Hiring (${counts.hiring})`);
     }
 
     if (counts.news) {
-      explanation.push(
-        `News (${counts.news})`,
-      );
+      explanation.push(`News (${counts.news})`);
     }
 
     const latest = uniqueSignals[0];
 
     if (latest) {
       const hours =
-        (Date.now() - latest.createdAt.getTime()) /
-        (1000 * 60 * 60);
+        (Date.now() - latest.createdAt.getTime()) / (1000 * 60 * 60);
 
       if (hours < 24) {
-        explanation.push(
-          'Very recent activity',
-        );
+        explanation.push('Very recent activity');
       }
     }
 
@@ -183,13 +163,10 @@ export class OpportunitiesProcessor extends WorkerHost {
     ========================================= */
 
     const title =
-      explanation.join(' • ') ||
-      `${uniqueSignals.length} recent signals`;
+      explanation.join(' • ') || `${uniqueSignals.length} recent signals`;
 
     const hash = createHash('sha256')
-      .update(
-        `${companyId}-${title}-${priority}`,
-      )
+      .update(`${companyId}-${title}-${priority}`)
       .digest('hex');
 
     await this.prisma.opportunity.upsert({

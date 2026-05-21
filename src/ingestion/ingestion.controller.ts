@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Param,
-  UseGuards,
-} from '@nestjs/common';
-
+import { Controller, Get, Post, Param, UseGuards } from '@nestjs/common';
 
 import {
   ApiTags,
@@ -24,9 +17,7 @@ import { AdminGuard } from '../auth/guards/admin.guard';
 @Controller('admin/ingestion')
 @UseGuards(JwtAuthGuard, AdminGuard)
 export class IngestionController {
-  constructor(
-    private ingestionService: IngestionService
-  ) {}
+  constructor(private ingestionService: IngestionService) {}
 
   @Get('overview')
   @ApiOperation({
@@ -137,9 +128,7 @@ export class IngestionController {
     status: 200,
     description: 'Ingestion source triggered successfully',
   })
-  runSource(
-    @Param('name') name: string
-  ) {
+  runSource(@Param('name') name: string) {
     return this.ingestionService.runSource(name);
   }
 }

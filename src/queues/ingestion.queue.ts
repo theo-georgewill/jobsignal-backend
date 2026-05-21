@@ -10,9 +10,7 @@ export class IngestionQueue {
     private queue: Queue,
   ) {}
 
-  async syncCompanyJobs(
-    companyId: string,
-  ) {
+  async syncCompanyJobs(companyId: string) {
     await this.queue.add(
       'sync-company-jobs',
       {
@@ -33,9 +31,7 @@ export class IngestionQueue {
     );
   }
 
-  async syncProvider(
-    provider: string,
-  ) {
+  async syncProvider(provider: string) {
     await this.queue.add(
       'sync-provider',
       {

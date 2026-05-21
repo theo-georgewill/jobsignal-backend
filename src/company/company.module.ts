@@ -10,9 +10,9 @@ import { DomainDiscoveryService } from './services/domain-discovery.service';
 @Module({
   imports: [PrismaModule, QueuesModule],
   providers: [
-    CompanyService, 
-    CompanyProcessor, 
-    CompanyEnrichmentService, 
+    CompanyService,
+    CompanyProcessor,
+    CompanyEnrichmentService,
     CompanyResolutionService,
     DomainDiscoveryService,
   ],

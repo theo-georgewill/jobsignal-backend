@@ -9,10 +9,7 @@ export class CreateJobDto {
 
   remote?: boolean;
 
-  workMode?:
-    | 'remote'
-    | 'hybrid'
-    | 'onsite';
+  workMode?: 'remote' | 'hybrid' | 'onsite';
 
   employmentType?: string;
 
@@ -20,12 +17,7 @@ export class CreateJobDto {
 
   source!: string;
 
-  sourceType?:
-    | 'ats'
-    | 'api'
-    | 'scraper'
-    | 'rss'
-    | 'board';
+  sourceType?: 'ats' | 'api' | 'scraper' | 'rss' | 'board';
 
   sourcePlatform?: string;
 

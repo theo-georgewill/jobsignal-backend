@@ -97,7 +97,7 @@ export function detectSignal(title: string): DetectedSignal | null {
  * Helper: check if any keyword exists in string
  */
 function includesAny(text: string, keywords: string[]): boolean {
-  return keywords.some(keyword => text.includes(keyword));
+  return keywords.some((keyword) => text.includes(keyword));
 }
 
 /**
@@ -122,8 +122,8 @@ export function extractCompany(title: string): string {
 
   const words = title.split(' ');
 
-  const index = words.findIndex(word =>
-    stopWords.includes(word.toLowerCase())
+  const index = words.findIndex((word) =>
+    stopWords.includes(word.toLowerCase()),
   );
 
   // take words BEFORE action keyword

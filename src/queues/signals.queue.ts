@@ -10,9 +10,7 @@ export class SignalsQueue {
     private queue: Queue,
   ) {}
 
-  async recompute(
-    companyId: string,
-  ) {
+  async recompute(companyId: string) {
     await this.queue.add(
       'recompute-signals',
       {
@@ -33,9 +31,7 @@ export class SignalsQueue {
     );
   }
 
-  async analyzeNews(
-    companyId: string,
-  ) {
+  async analyzeNews(companyId: string) {
     await this.queue.add(
       'analyze-news',
       {
@@ -56,9 +52,7 @@ export class SignalsQueue {
     );
   }
 
-  async detectHiringSignals(
-    companyId: string,
-  ) {
+  async detectHiringSignals(companyId: string) {
     await this.queue.add(
       'detect-hiring-signals',
       {
@@ -79,9 +73,7 @@ export class SignalsQueue {
     );
   }
 
-  async detectFundingSignals(
-    companyId: string,
-  ) {
+  async detectFundingSignals(companyId: string) {
     await this.queue.add(
       'detect-funding-signals',
       {

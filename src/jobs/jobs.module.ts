@@ -12,20 +12,9 @@ import { CompanyResolutionService } from '../company/services/company-resolution
 import { DomainDiscoveryService } from '../company/services/domain-discovery.service';
 
 @Module({
-  imports: [
-    PrismaModule,
-    QueuesModule,
-  ],
-  providers: [
-    JobsService,
-    CompanyResolutionService,
-    DomainDiscoveryService,
-  ],
-  controllers: [
-    JobsController,
-  ],
-  exports: [
-    JobsService,
-  ],
+  imports: [PrismaModule, QueuesModule],
+  providers: [JobsService, CompanyResolutionService, DomainDiscoveryService],
+  controllers: [JobsController],
+  exports: [JobsService],
 })
 export class JobsModule {}

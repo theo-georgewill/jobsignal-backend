@@ -7,7 +7,7 @@ import { SignalsModule } from '../signals/signals.module';
 import { QueuesModule } from '../queues/queues.module';
 @Module({
   imports: [JobsModule, PrismaModule, SignalsModule, QueuesModule],
-  providers: [IngestionService,],
+  providers: [IngestionService],
   controllers: [IngestionController],
 })
 export class IngestionModule {}

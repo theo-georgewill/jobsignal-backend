@@ -3,6 +3,7 @@ import { SignalsService } from './signals.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JobsService } from '../jobs/jobs.service';
 import { getQueueToken } from '@nestjs/bullmq';
+import { CompanyResolutionService } from '../company/services/company-resolution.service';
 
 describe('SignalsService', () => {
   let service: SignalsService;
@@ -17,6 +18,10 @@ describe('SignalsService', () => {
         },
         {
           provide: JobsService,
+          useValue: {},
+        },
+        {
+          provide: CompanyResolutionService,
           useValue: {},
         },
         {

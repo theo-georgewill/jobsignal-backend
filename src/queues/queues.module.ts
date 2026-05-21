@@ -27,18 +27,8 @@ import { CompanyQueue } from './company.queue';
     ),
   ],
 
-  providers: [
-    IngestionQueue,
-    SignalsQueue,
-    OpportunitiesQueue,
-    CompanyQueue,
-  ],
+  providers: [IngestionQueue, SignalsQueue, OpportunitiesQueue, CompanyQueue],
 
-  exports: [
-    IngestionQueue,
-    SignalsQueue,
-    OpportunitiesQueue,
-    CompanyQueue,
-  ],
+  exports: [IngestionQueue, SignalsQueue, OpportunitiesQueue, CompanyQueue],
 })
 export class QueuesModule {}

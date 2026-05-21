@@ -1,8 +1,8 @@
-import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../../prisma/prisma.service";
-import { CompanyQueue } from "../../queues/company.queue";
-import { DomainDiscoveryService } from "./domain-discovery.service";
-import { normalizeCompanyName } from "../../common/utils/company.util";
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+import { CompanyQueue } from '../../queues/company.queue';
+import { DomainDiscoveryService } from './domain-discovery.service';
+import { normalizeCompanyName } from '../../common/utils/company.util';
 
 @Injectable()
 export class CompanyResolutionService {
@@ -19,26 +19,20 @@ export class CompanyResolutionService {
     atsType?: string;
   }) {
     if (!input.name) {
-      throw new Error(
-        'Company name required',
-      );
+      throw new Error('Company name required');
     }
 
-    const normalizedName =
-      normalizeCompanyName(
-        input.name,
-      );
+    const normalizedName = normalizeCompanyName(input.name);
 
     /* =========================================
        TRY NAME MATCH
     ========================================= */
 
-    let company =
-      await this.prisma.company.findUnique({
-        where: {
-          name: normalizedName,
-        },
-      });
+    let company = await this.prisma.company.findUnique({
+      where: {
+        name: normalizedName,
+      },
+    });
 
     if (company) {
       return company;
@@ -50,21 +44,18 @@ export class CompanyResolutionService {
 
     const website =
       input.website ||
-      await this.domainDiscoveryService.discover(
-        normalizedName,
-      );
+      (await this.domainDiscoveryService.discover(normalizedName));
 
     /* =========================================
        MATCH BY WEBSITE
     ========================================= */
 
     if (website) {
-      company =
-        await this.prisma.company.findFirst({
-          where: {
-            website,
-          },
-        });
+      company = await this.prisma.company.findFirst({
+        where: {
+          website,
+        },
+      });
 
       if (company) {
         return company;
@@ -75,26 +66,19 @@ export class CompanyResolutionService {
        CREATE COMPANY
     ========================================= */
 
-    company =
-      await this.prisma.company.create({
-        data: {
-          name: normalizedName,
-          website,
-          careersUrl:
-            input.careersUrl ||
-            '',
-          atsType:
-            input.atsType ||
-            'unknown',
-          enabled: true,
-          healthy: true,
-          tags: [],
-        },
-      });
+    company = await this.prisma.company.create({
+      data: {
+        name: normalizedName,
+        website,
+        careersUrl: input.careersUrl || '',
+        atsType: input.atsType || 'unknown',
+        enabled: true,
+        healthy: true,
+        tags: [],
+      },
+    });
 
-    await this.companyQueue.enrich(
-      company.id,
-    );
+    await this.companyQueue.enrich(company.id);
 
     return company;
   }

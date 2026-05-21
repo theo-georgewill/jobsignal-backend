@@ -23,7 +23,7 @@ export class SignalsService {
     private prisma: PrismaService,
     private companyResolutionService: CompanyResolutionService,
     @InjectQueue('opportunities')
-    private opportunitiesQueue: Queue
+    private opportunitiesQueue: Queue,
   ) {}
 
   async createMany(signals: IncomingSignal[]) {
@@ -40,7 +40,7 @@ export class SignalsService {
           if (!processed) return;
 
           const company = await this.companyResolutionService.resolve({
-            name: processed.companyName
+            name: processed.companyName,
           });
 
           const hash = this.generateHash(processed, processed.companyName);
@@ -99,8 +99,8 @@ export class SignalsService {
           }
 
           return created;
-        })
-      )
+        }),
+      ),
     );
   }
 
@@ -120,11 +120,7 @@ export class SignalsService {
 
     const amount = this.extractAmount(signal.title);
 
-    const confidence = this.computeConfidence(
-      signal,
-      normalizedName,
-      amount
-    );
+    const confidence = this.computeConfidence(signal, normalizedName, amount);
 
     const score = this.computeScore(type, amount, confidence);
 
@@ -178,7 +174,7 @@ export class SignalsService {
   private computeConfidence(
     signal: IncomingSignal,
     company: string,
-    amount: number | null
+    amount: number | null,
   ) {
     let confidence = 0;
 
@@ -192,7 +188,7 @@ export class SignalsService {
   private computeScore(
     type: string,
     amount: number | null,
-    confidence: number
+    confidence: number,
   ) {
     let score = 0;
 

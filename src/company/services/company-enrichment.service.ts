@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -14,25 +11,16 @@ import { IngestionQueue } from '../../queues/ingestion.queue';
 
 @Injectable()
 export class CompanyEnrichmentService {
-  private readonly logger =
-    new Logger(
-      CompanyEnrichmentService.name,
-    );
+  private readonly logger = new Logger(CompanyEnrichmentService.name);
 
   constructor(
     private prisma: PrismaService,
     private ingestionQueue: IngestionQueue,
   ) {}
 
-  private logStep(
-    companyId: string,
-    step: string,
-    data?: unknown,
-  ) {
+  private logStep(companyId: string, step: string, data?: unknown) {
     const message = `[COMPANY:${companyId}] ${step}${
-      data
-        ? ` | ${JSON.stringify(data)}`
-        : ''
+      data ? ` | ${JSON.stringify(data)}` : ''
     }`;
 
     this.logger.log(message);
@@ -43,14 +31,9 @@ export class CompanyEnrichmentService {
   async enrich(companyId: string) {
     const startedAt = Date.now();
 
-    const logStep = (
-      step: string,
-      data?: unknown,
-    ) => {
+    const logStep = (step: string, data?: unknown) => {
       const message = `[COMPANY:${companyId}] ${step}${
-        data
-          ? ` | ${JSON.stringify(data)}`
-          : ''
+        data ? ` | ${JSON.stringify(data)}` : ''
       }`;
 
       this.logger.log(message);
@@ -60,12 +43,11 @@ export class CompanyEnrichmentService {
 
     logStep('ENRICHMENT_STARTED');
 
-    const company =
-      await this.prisma.company.findUnique({
-        where: {
-          id: companyId,
-        },
-      });
+    const company = await this.prisma.company.findUnique({
+      where: {
+        id: companyId,
+      },
+    });
 
     if (!company) {
       logStep('COMPANY_NOT_FOUND');
@@ -102,10 +84,7 @@ export class CompanyEnrichmentService {
 
       logStep('NORMALIZING_NAME');
 
-      const normalizedName =
-        normalizeCompanyName(
-          company.name,
-        );
+      const normalizedName = normalizeCompanyName(company.name);
 
       /* =========================================
         DOMAIN
@@ -113,17 +92,13 @@ export class CompanyEnrichmentService {
 
       logStep('NORMALIZING_WEBSITE');
 
-      const website =
-        this.normalizeWebsite(
-          company.website,
-        );
+      const website = this.normalizeWebsite(company.website);
 
       logStep('WEBSITE_NORMALIZED', {
         website,
       });
 
-      const domain =
-        this.extractDomain(website);
+      const domain = this.extractDomain(website);
 
       logStep('DOMAIN_EXTRACTED', {
         domain,
@@ -133,9 +108,7 @@ export class CompanyEnrichmentService {
         LOGO
       ========================================= */
 
-      const logoUrl = website
-        ? getLogoUrl(website)
-        : null;
+      const logoUrl = website ? getLogoUrl(website) : null;
 
       logStep('LOGO_GENERATED', {
         logoUrl,
@@ -145,17 +118,10 @@ export class CompanyEnrichmentService {
         CAREERS URL
       ========================================= */
 
-      let careersUrl =
-        company.careersUrl;
+      let careersUrl = company.careersUrl;
 
-      if (
-        !careersUrl &&
-        website
-      ) {
-        careersUrl =
-          this.detectCareersUrl(
-            website,
-          );
+      if (!careersUrl && website) {
+        careersUrl = this.detectCareersUrl(website);
       }
 
       logStep('CAREERS_DETECTED', {
@@ -166,17 +132,10 @@ export class CompanyEnrichmentService {
         ATS DETECTION
       ========================================= */
 
-      let atsType =
-        company.atsType;
+      let atsType = company.atsType;
 
-      if (
-        !atsType &&
-        careersUrl
-      ) {
-        atsType =
-          this.detectAtsType(
-            careersUrl,
-          );
+      if (!atsType && careersUrl) {
+        atsType = this.detectAtsType(careersUrl);
       }
 
       logStep('ATS_DETECTED', {
@@ -187,9 +146,7 @@ export class CompanyEnrichmentService {
         HEALTH
       ========================================= */
 
-      const healthy = Boolean(
-        website || careersUrl,
-      );
+      const healthy = Boolean(website || careersUrl);
 
       logStep('HEALTH_COMPUTED', {
         healthy,
@@ -201,23 +158,21 @@ export class CompanyEnrichmentService {
 
       logStep('UPDATING_COMPANY');
 
-      const updatedCompany =
-        await this.prisma.company.update({
-          where: {
-            id: company.id,
-          },
+      const updatedCompany = await this.prisma.company.update({
+        where: {
+          id: company.id,
+        },
 
-          data: {
-            name: normalizedName,
-            website,
-            logoUrl,
-            careersUrl,
-            atsType,
-            healthy,
-            lastCheckedAt:
-              new Date(),
-          },
-        });
+        data: {
+          name: normalizedName,
+          website,
+          logoUrl,
+          careersUrl,
+          atsType,
+          healthy,
+          lastCheckedAt: new Date(),
+        },
+      });
 
       logStep('COMPANY_UPDATED');
 
@@ -229,18 +184,16 @@ export class CompanyEnrichmentService {
 
       await this.prisma.companyLog.create({
         data: {
-          companyId:
-            updatedCompany.id,
+          companyId: updatedCompany.id,
 
           level: 'healthy',
 
-          message:
-            this.buildSuccessLog(
-              updatedCompany.name,
-              domain,
-              careersUrl,
-              atsType,
-            ),
+          message: this.buildSuccessLog(
+            updatedCompany.name,
+            domain,
+            careersUrl,
+            atsType,
+          ),
         },
       });
 
@@ -250,38 +203,23 @@ export class CompanyEnrichmentService {
         AUTO INGESTION
       ========================================= */
 
-      if (
-        updatedCompany.enabled &&
-        updatedCompany.careersUrl
-      ) {
+      if (updatedCompany.enabled && updatedCompany.careersUrl) {
         logStep('QUEUEING_INGESTION');
 
-        await this.ingestionQueue.syncCompanyJobs(
-          updatedCompany.id,
-        );
+        await this.ingestionQueue.syncCompanyJobs(updatedCompany.id);
 
-        logStep(
-          'INGESTION_QUEUED',
-        );
+        logStep('INGESTION_QUEUED');
       }
 
-      logStep(
-        'ENRICHMENT_COMPLETED',
-        {
-          durationMs:
-            Date.now() - startedAt,
-        },
-      );
+      logStep('ENRICHMENT_COMPLETED', {
+        durationMs: Date.now() - startedAt,
+      });
     } catch (error) {
       this.logger.error(
         `[COMPANY:${company.id}] ENRICHMENT_FAILED: ${
-          error instanceof Error
-            ? error.message
-            : 'Unknown error'
+          error instanceof Error ? error.message : 'Unknown error'
         }`,
-        error instanceof Error
-          ? error.stack
-          : undefined,
+        error instanceof Error ? error.stack : undefined,
       );
 
       console.error(error);
@@ -293,8 +231,7 @@ export class CompanyEnrichmentService {
 
         data: {
           healthy: false,
-          lastCheckedAt:
-            new Date(),
+          lastCheckedAt: new Date(),
         },
       });
 
@@ -317,23 +254,16 @@ export class CompanyEnrichmentService {
      WEBSITE
   ========================================= */
 
-  private normalizeWebsite(
-    website?: string | null,
-  ) {
+  private normalizeWebsite(website?: string | null) {
     if (!website) {
       return null;
     }
 
-    let normalized =
-      website.trim();
+    let normalized = website.trim();
 
     if (
-      !normalized.startsWith(
-        'http://',
-      ) &&
-      !normalized.startsWith(
-        'https://',
-      )
+      !normalized.startsWith('http://') &&
+      !normalized.startsWith('https://')
     ) {
       normalized = `https://${normalized}`;
     }
@@ -345,9 +275,7 @@ export class CompanyEnrichmentService {
      DOMAIN
   ========================================= */
 
-  private extractDomain(
-    website?: string | null,
-  ) {
+  private extractDomain(website?: string | null) {
     if (!website) {
       return null;
     }
@@ -355,10 +283,7 @@ export class CompanyEnrichmentService {
     try {
       const url = new URL(website);
 
-      return url.hostname.replace(
-        'www.',
-        '',
-      );
+      return url.hostname.replace('www.', '');
     } catch {
       return null;
     }
@@ -368,13 +293,8 @@ export class CompanyEnrichmentService {
      CAREERS URL
   ========================================= */
 
-  private detectCareersUrl(
-    website: string,
-  ) {
-    const base = website.replace(
-      /\/$/,
-      '',
-    );
+  private detectCareersUrl(website: string) {
+    const base = website.replace(/\/$/, '');
 
     const commonPaths = [
       '/careers',
@@ -391,35 +311,22 @@ export class CompanyEnrichmentService {
      ATS DETECTION
   ========================================= */
 
-  private detectAtsType(
-    careersUrl: string,
-  ) {
-    const url =
-      careersUrl.toLowerCase();
+  private detectAtsType(careersUrl: string) {
+    const url = careersUrl.toLowerCase();
 
-    if (
-      url.includes(
-        'greenhouse.io',
-      )
-    ) {
+    if (url.includes('greenhouse.io')) {
       return 'GREENHOUSE';
     }
 
-    if (
-      url.includes('lever.co')
-    ) {
+    if (url.includes('lever.co')) {
       return 'LEVER';
     }
 
-    if (
-      url.includes('ashbyhq.com')
-    ) {
+    if (url.includes('ashbyhq.com')) {
       return 'ASHBY';
     }
 
-    if (
-      url.includes('workday.com')
-    ) {
+    if (url.includes('workday.com')) {
       return 'WORKDAY';
     }
 
@@ -433,35 +340,23 @@ export class CompanyEnrichmentService {
   private buildSuccessLog(
     companyName: string,
     domain: string | null,
-    careersUrl:
-      | string
-      | null,
-    atsType:
-      | string
-      | null,
+    careersUrl: string | null,
+    atsType: string | null,
   ) {
     const parts: string[] = [];
 
-    parts.push(
-      `Enrichment completed for ${companyName}`,
-    );
+    parts.push(`Enrichment completed for ${companyName}`);
 
     if (domain) {
-      parts.push(
-        `Domain: ${domain}`,
-      );
+      parts.push(`Domain: ${domain}`);
     }
 
     if (careersUrl) {
-      parts.push(
-        'Careers detected',
-      );
+      parts.push('Careers detected');
     }
 
     if (atsType) {
-      parts.push(
-        `ATS: ${atsType}`,
-      );
+      parts.push(`ATS: ${atsType}`);
     }
 
     return parts.join(' • ');

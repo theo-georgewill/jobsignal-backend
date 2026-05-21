@@ -31,6 +31,6 @@ export async function scrapeWeWorkRemotely() {
   });
 
   return {
-    jobs, 
+    jobs,
   };
 }

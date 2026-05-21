@@ -10,14 +10,11 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [
     PrismaModule,
     BullModule.registerQueue({
-      name: 'opportunities', 
+      name: 'opportunities',
     }),
   ],
   controllers: [OpportunitiesController],
-  providers: [
-    OpportunitiesService, 
-    OpportunitiesProcessor
-  ],
+  providers: [OpportunitiesService, OpportunitiesProcessor],
   exports: [OpportunitiesService],
 })
 export class OpportunitiesModule {}

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CompanyService } from './company.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CompanyController } from './company.controller';
+import { CompanyQueue } from '../queues/company.queue';
 
 describe('CompanyService', () => {
   let service: CompanyService;
@@ -13,6 +14,10 @@ describe('CompanyService', () => {
         CompanyService,
         {
           provide: PrismaService,
+          useValue: {},
+        },
+        {
+          provide: CompanyQueue,
           useValue: {},
         },
       ],
