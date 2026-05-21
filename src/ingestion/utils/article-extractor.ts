@@ -6,7 +6,7 @@ export function extractArticles(
     articleSelector: string;
     titleSelector: string;
     linkSelector: string;
-  }
+  },
 ) {
   const $ = cheerio.load(html);
   const results: { title: string; link: string }[] = [];

@@ -15,7 +15,7 @@ import { BullModule } from '@nestjs/bullmq';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, 
+      isGlobal: true,
     }),
     BullModule.forRoot({
       connection: {

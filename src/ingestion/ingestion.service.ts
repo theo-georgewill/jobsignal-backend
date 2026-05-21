@@ -6,14 +6,15 @@ import { SignalsService } from '../signals/signals.service';
 
 import { IngestedJob } from './types/jobs.types';
 import { PROVIDER_REGISTRY } from './registry/provider-registry';
+import { CompanyQueue } from '../queues/company.queue';
 
 @Injectable()
-
 export class IngestionService implements OnModuleInit {
   constructor(
     private jobsService: JobsService,
     private prisma: PrismaService,
-    private signalsService: SignalsService
+    private signalsService: SignalsService,
+    private companyQueue: CompanyQueue,
   ) {}
 
   /* =========================================
@@ -21,24 +22,19 @@ export class IngestionService implements OnModuleInit {
   ========================================= */
 
   async getEngine() {
-    let engine =
-      await this.prisma.ingestionEngine.findFirst();
+    let engine = await this.prisma.ingestionEngine.findFirst();
 
     if (!engine) {
-      engine =
-        await this.prisma.ingestionEngine.create({
-          data: {},
-        });
+      engine = await this.prisma.ingestionEngine.create({
+        data: {},
+      });
     }
 
     return engine;
   }
 
-  async setRunning(
-    running: boolean
-  ) {
-    const engine =
-      await this.getEngine();
+  async setRunning(running: boolean) {
+    const engine = await this.getEngine();
 
     await this.prisma.ingestionEngine.update({
       where: {
@@ -55,32 +51,28 @@ export class IngestionService implements OnModuleInit {
   ========================================= */
 
   async ingestAll() {
-    const engine =
-      await this.getEngine();
+    const engine = await this.getEngine();
 
     if (engine.paused) {
       return {
-        message:
-          'Engine is paused',
+        message: 'Engine is paused',
       };
     }
 
     if (engine.running) {
       return {
-        message:
-          'Engine already running',
+        message: 'Engine already running',
       };
     }
 
     await this.setRunning(true);
 
-    const run =
-      await this.prisma.ingestionRun.create({
-        data: {
-          sourceName: 'all',
-          status: 'running',
-        },
-      });
+    const run = await this.prisma.ingestionRun.create({
+      data: {
+        sourceName: 'all',
+        status: 'running',
+      },
+    });
 
     try {
       console.log('STEP 1: Starting provider ingestion');
@@ -92,62 +84,60 @@ export class IngestionService implements OnModuleInit {
       const allJobs = result.jobs;
       const allSignals = result.signals;
 
-      console.log(
-        `Fetched ${allJobs.length} jobs`
-      );
+      console.log(`Fetched ${allJobs.length} jobs`);
 
-      console.log(
-        `Fetched ${allSignals.length} signals`
-      );
+      console.log(`Fetched ${allSignals.length} signals`);
 
       console.log('STEP 3: Filtering jobs');
-      
-      const filteredJobs =
-        this.filterJobs(allJobs);
 
-      console.log(
-        `Filtered to ${filteredJobs.length} remote jobs`
-      );
+      const filteredJobs = this.filterJobs(allJobs);
+
+      console.log(`Filtered to ${filteredJobs.length} remote jobs`);
 
       console.log('STEP 4: Saving jobs');
 
-      await this.saveJobs(
-        filteredJobs
-      );
+      await this.saveJobs(filteredJobs);
 
       console.log('STEP 5: Jobs saved');
 
       console.log('STEP 6: Creating signals');
-      
-      await this.signalsService.createMany(
-        allSignals
-      );
+
+      await this.signalsService.createMany(allSignals);
 
       console.log('STEP 7: Signals created');
+
+      console.log('STEP 8: Queueing company enrichment');
+
+      const companies = await this.prisma.company.findMany({
+        select: {
+          id: true,
+        },
+      });
+
+      for (const company of companies) {
+        await this.companyQueue.enrich(company.id);
+      }
+
+      console.log(
+        `STEP 9: Queued ${companies.length} companies for enrichment`,
+      );
 
       await this.prisma.ingestionRun.update({
         where: {
           id: run.id,
         },
         data: {
-          status:
-            'completed',
-          fetched:
-            allJobs.length,
-          saved:
-            filteredJobs.length,
-          finishedAt:
-            new Date(),
+          status: 'completed',
+          fetched: allJobs.length,
+          saved: filteredJobs.length,
+          finishedAt: new Date(),
         },
       });
 
       return {
-        message:
-          'All jobs ingested',
-        totalFetched:
-          allJobs.length,
-        totalSaved:
-          filteredJobs.length,
+        message: 'All jobs ingested',
+        totalFetched: allJobs.length,
+        totalSaved: filteredJobs.length,
       };
     } catch (error: any) {
       await this.prisma.ingestionRun.update({
@@ -156,19 +146,14 @@ export class IngestionService implements OnModuleInit {
         },
         data: {
           status: 'failed',
-          message:
-            error?.message ||
-            'Unknown error',
-          finishedAt:
-            new Date(),
+          message: error?.message || 'Unknown error',
+          finishedAt: new Date(),
         },
       });
 
       throw error;
     } finally {
-      await this.setRunning(
-        false
-      );
+      await this.setRunning(false);
     }
   }
 
@@ -179,78 +164,52 @@ export class IngestionService implements OnModuleInit {
   async ingestAPISources() {
     const sources = PROVIDER_REGISTRY;
 
-    const results =
-      await Promise.allSettled(
-        sources.map((s) =>
-          s.runner()
-        )
-      );
+    const results = await Promise.allSettled(sources.map((s) => s.runner()));
 
     const jobs: IngestedJob[] = [];
     const signals: any[] = [];
-    
-    for (
-      let i = 0;
-      i < results.length;
-      i++
-    ) {
-      const result =
-        results[i];
 
-      const source =
-        sources[i];
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i];
 
-      if (
-        result.status ===
-        'fulfilled'
-      ) {
+      const source = sources[i];
+
+      if (result.status === 'fulfilled') {
         const data = result.value;
 
         const providerJobs = data.jobs ?? [];
         const providerSignals = data.signals ?? [];
-        
-        jobs.push(...providerJobs);        
+
+        jobs.push(...providerJobs);
         signals.push(...providerSignals);
 
-        await this.prisma.ingestionSource.update(
-          {
-            where: {
-              name: source.name,
-            },
-            data: {
-              healthy: true,
-              lastRunAt:
-                new Date(),
-            },
-          }
-        );
+        await this.prisma.ingestionSource.update({
+          where: {
+            name: source.name,
+          },
+          data: {
+            healthy: true,
+            lastRunAt: new Date(),
+          },
+        });
         await this.updateSuccessRate(source.name);
       } else {
-        await this.prisma.ingestionLog.create(
-          {
-            data: {
-              level:
-                'failed',
-              sourceName:
-                source.name,
-              message:
-                result.reason
-                  ?.message ||
-                'Unknown error',
-            },
-          }
-        );
+        await this.prisma.ingestionLog.create({
+          data: {
+            level: 'failed',
+            sourceName: source.name,
+            message: result.reason?.message || 'Unknown error',
+          },
+        });
 
-        await this.prisma.ingestionSource.update(
-          {
-            where: {
-              name: source.name,
-            },
-            data: {
-              healthy: false,
-            },
-          }
-        );
+        await this.prisma.ingestionSource.update({
+          where: {
+            name: source.name,
+          },
+          data: {
+            healthy: false,
+          },
+        });
         await this.updateSuccessRate(source.name);
       }
     }
@@ -258,35 +217,20 @@ export class IngestionService implements OnModuleInit {
     return { jobs, signals };
   }
 
-
-
   /* =========================================
      FILTER
   ========================================= */
 
-  filterJobs(
-    jobs: IngestedJob[]
-  ) {
-    return jobs.filter(
-      (job) =>
-        job.remote === true
-    );
+  filterJobs(jobs: IngestedJob[]) {
+    return jobs.filter((job) => job.remote === true);
   }
 
   /* =========================================
      SAVE
   ========================================= */
 
-  async saveJobs(
-    jobs: IngestedJob[]
-  ) {
-    await Promise.all(
-      jobs.map((job) =>
-        this.jobsService.create(
-          job
-        )
-      )
-    );
+  async saveJobs(jobs: IngestedJob[]) {
+    await Promise.all(jobs.map((job) => this.jobsService.create(job)));
   }
 
   /* =========================================
@@ -294,240 +238,167 @@ export class IngestionService implements OnModuleInit {
   ========================================= */
 
   async overview() {
-    const engine =
-      await this.getEngine();
+    const engine = await this.getEngine();
 
-    const totalSources =
-      await this.prisma.ingestionSource.count();
+    const totalSources = await this.prisma.ingestionSource.count();
 
-    const healthy =
-      await this.prisma.ingestionSource.count(
-        {
-          where: {
-            healthy: true,
-          },
-        }
-      );
+    const healthy = await this.prisma.ingestionSource.count({
+      where: {
+        healthy: true,
+      },
+    });
 
-    const today =
-      new Date();
+    const today = new Date();
 
-    today.setHours(
-      0,
-      0,
-      0,
-      0
-    );
+    today.setHours(0, 0, 0, 0);
 
-    const jobsToday =
-      await this.prisma.ingestionRun.aggregate(
-        {
-          _sum: {
-            saved: true,
-          },
-          where: {
-            startedAt: {
-              gte: today,
-            },
-            status:
-              'completed',
-          },
-        }
-      );
+    const jobsToday = await this.prisma.ingestionRun.aggregate({
+      _sum: {
+        saved: true,
+      },
+      where: {
+        startedAt: {
+          gte: today,
+        },
+        status: 'completed',
+      },
+    });
 
-  const totalJobs =
-    await this.prisma.job.count();
+    const totalJobs = await this.prisma.job.count();
 
     return {
       totalSources,
       healthy,
-      running:
-        engine.running
-          ? 1
-          : 0,
-      paused:
-        engine.paused,
-      jobsToday:
-        jobsToday._sum
-          .saved || 0,
+      running: engine.running ? 1 : 0,
+      paused: engine.paused,
+      jobsToday: jobsToday._sum.saved || 0,
       totalJobs,
     };
   }
 
   async sources() {
-    const engine =
-      await this.getEngine();
+    const engine = await this.getEngine();
 
-    const rows =
-      await this.prisma.ingestionSource.findMany(
-        {
-          orderBy: {
-            name: 'asc',
-          },
-        }
-      );
+    const rows = await this.prisma.ingestionSource.findMany({
+      orderBy: {
+        name: 'asc',
+      },
+    });
 
-    return rows.map(
-      (row) => ({
-        id: row.id,
-        name: row.name,
-        type: row.type,
-        enabled:
-          row.enabled,
-        healthy:
-          row.healthy,
-        status:
-          engine.paused
-            ? 'paused'
-            : row.healthy
-            ? 'healthy'
-            : 'failed',
-        lastRunAt:
-          row.lastRunAt,
-        successRate:
-          row.successRate,
-      })
-    );
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      type: row.type,
+      enabled: row.enabled,
+      healthy: row.healthy,
+      status: engine.paused ? 'paused' : row.healthy ? 'healthy' : 'failed',
+      lastRunAt: row.lastRunAt,
+      successRate: row.successRate,
+    }));
   }
 
   async status() {
-    const engine =
-      await this.getEngine();
+    const engine = await this.getEngine();
 
     return {
-      paused:
-        engine.paused,
-      running:
-        engine.running,
+      paused: engine.paused,
+      running: engine.running,
     };
   }
 
   async pause() {
-    const engine =
-      await this.getEngine();
+    const engine = await this.getEngine();
 
-    await this.prisma.ingestionEngine.update(
-      {
-        where: {
-          id: engine.id,
-        },
-        data: {
-          paused: true,
-        },
-      }
-    );
+    await this.prisma.ingestionEngine.update({
+      where: {
+        id: engine.id,
+      },
+      data: {
+        paused: true,
+      },
+    });
 
     return {
-      message:
-        'Engine paused',
+      message: 'Engine paused',
     };
   }
 
   async resume() {
-    const engine =
-      await this.getEngine();
+    const engine = await this.getEngine();
 
-    await this.prisma.ingestionEngine.update(
-      {
-        where: {
-          id: engine.id,
-        },
-        data: {
-          paused: false,
-        },
-      }
-    );
+    await this.prisma.ingestionEngine.update({
+      where: {
+        id: engine.id,
+      },
+      data: {
+        paused: false,
+      },
+    });
 
     return {
-      message:
-        'Engine resumed',
+      message: 'Engine resumed',
     };
   }
 
-  async runSource(
-    name: string
-  ) {
-    const engine =
-      await this.getEngine();
+  async runSource(name: string) {
+    const engine = await this.getEngine();
 
     if (engine.paused) {
       return {
-        message:
-          'Engine is paused',
+        message: 'Engine is paused',
       };
     }
 
-    const source =
-      PROVIDER_REGISTRY.find(
-        (s) =>
-          s.name === name
-      );
+    const source = PROVIDER_REGISTRY.find((s) => s.name === name);
 
     if (!source) {
       return {
-        message:
-          'Unknown source',
+        message: 'Unknown source',
       };
     }
 
-    const run =
-      await this.prisma.ingestionRun.create({
-        data: {
-          sourceName: name,
-          status: 'running',
-        },
-      });
+    const run = await this.prisma.ingestionRun.create({
+      data: {
+        sourceName: name,
+        status: 'running',
+      },
+    });
 
     try {
       const result = await source.runner();
       const jobs = result.jobs ?? [];
 
-      const filtered =
-        this.filterJobs(
-          jobs
-        );
+      const filtered = this.filterJobs(jobs);
 
-      await this.saveJobs(
-        filtered
-      );
+      await this.saveJobs(filtered);
 
       await this.prisma.ingestionRun.update({
         where: {
           id: run.id,
         },
         data: {
-          status:
-            'completed',
-          fetched:
-            jobs.length,
-          saved:
-            filtered.length,
-          finishedAt:
-            new Date(),
+          status: 'completed',
+          fetched: jobs.length,
+          saved: filtered.length,
+          finishedAt: new Date(),
         },
       });
 
-      await this.prisma.ingestionSource.update(
-        {
-          where: {
-            name,
-          },
-          data: {
-            lastRunAt:
-              new Date(),
-            healthy:
-              true,
-          },
-        }
-      );
+      await this.prisma.ingestionSource.update({
+        where: {
+          name,
+        },
+        data: {
+          lastRunAt: new Date(),
+          healthy: true,
+        },
+      });
       await this.updateSuccessRate(name);
 
       return {
         source: name,
-        fetched:
-          jobs.length,
-        saved:
-          filtered.length,
+        fetched: jobs.length,
+        saved: filtered.length,
       };
     } catch (error: any) {
       await this.prisma.ingestionRun.update({
@@ -536,11 +407,8 @@ export class IngestionService implements OnModuleInit {
         },
         data: {
           status: 'failed',
-          message:
-            error?.message ||
-            'Unknown error',
-          finishedAt:
-            new Date(),
+          message: error?.message || 'Unknown error',
+          finishedAt: new Date(),
         },
       });
       await this.updateSuccessRate(name);
@@ -549,15 +417,12 @@ export class IngestionService implements OnModuleInit {
   }
 
   async history() {
-    return this.prisma.ingestionRun.findMany(
-      {
-        orderBy: {
-          startedAt:
-            'desc',
-        },
-        take: 50,
-      }
-    );
+    return this.prisma.ingestionRun.findMany({
+      orderBy: {
+        startedAt: 'desc',
+      },
+      take: 50,
+    });
   }
 
   async logs() {
@@ -569,45 +434,31 @@ export class IngestionService implements OnModuleInit {
     });
   }
 
-  async updateSuccessRate(
-    sourceName: string
-  ) {
-    const runs =
-      await this.prisma.ingestionRun.findMany({
-        where: {
-          sourceName,
-        },
-        orderBy: {
-          startedAt: 'desc',
-        },
-        take: 20,
-      });
+  async updateSuccessRate(sourceName: string) {
+    const runs = await this.prisma.ingestionRun.findMany({
+      where: {
+        sourceName,
+      },
+      orderBy: {
+        startedAt: 'desc',
+      },
+      take: 20,
+    });
 
     if (!runs.length) {
       return;
     }
 
-    const successful =
-      runs.filter(
-        (r) =>
-          r.status ===
-          'completed'
-      ).length;
+    const successful = runs.filter((r) => r.status === 'completed').length;
 
-    const rate =
-      Math.round(
-        (successful /
-          runs.length) *
-          100
-      );
+    const rate = Math.round((successful / runs.length) * 100);
 
     await this.prisma.ingestionSource.update({
       where: {
         name: sourceName,
       },
       data: {
-        successRate:
-          rate,
+        successRate: rate,
       },
     });
   }
@@ -631,9 +482,7 @@ export class IngestionService implements OnModuleInit {
       });
     }
 
-    console.log(
-      'Sources synced'
-    );
+    console.log('Sources synced');
   }
 
   async onModuleInit() {

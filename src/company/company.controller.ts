@@ -30,14 +30,9 @@ import { CompanyResponseDto } from './dto/company-response.dto';
 @ApiTags('Admin - Companies')
 @ApiBearerAuth('JWT-auth')
 @Controller('admin/company')
-@UseGuards(
-  JwtAuthGuard,
-  AdminGuard,
-)
+@UseGuards(JwtAuthGuard, AdminGuard)
 export class CompanyController {
-  constructor(
-    private service: CompanyService,
-  ) {}
+  constructor(private service: CompanyService) {}
 
   @Get()
   @ApiOperation({
@@ -64,10 +59,36 @@ export class CompanyController {
     status: 200,
     description: 'Company logs retrieved successfully',
   })
-  logs(
-    @Param('id') id: string,
-  ) {
+  logs(@Param('id') id: string) {
     return this.service.logs(id);
+  }
+
+  @Get(':id/page')
+  @ApiOperation({
+    summary: 'Get company intelligence page',
+  })
+  @ApiParam({
+    name: 'id',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Company page data retrieved successfully',
+  })
+  findCompanyPage(@Param('id') id: string) {
+    return this.service.findCompanyPage(id);
+  }
+
+  @Post('reenrich')
+  @ApiOperation({
+    summary: 'Re-enrich all companies',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Re-enrichment queued',
+  })
+  reenrichAll() {
+    return this.service.reenrichAll();
   }
 
   @Post(':id/run')
@@ -82,9 +103,7 @@ export class CompanyController {
     status: 200,
     description: 'Company ingestion triggered',
   })
-  run(
-    @Param('id') id: string,
-  ) {
+  run(@Param('id') id: string) {
     return this.service.run(id);
   }
 
@@ -100,9 +119,7 @@ export class CompanyController {
     status: 200,
     type: CompanyResponseDto,
   })
-  findOne(
-    @Param('id') id: string,
-  ) {
+  findOne(@Param('id') id: string) {
     return this.service.findOne(id);
   }
 
@@ -114,9 +131,7 @@ export class CompanyController {
     status: 201,
     type: CompanyResponseDto,
   })
-  create(
-    @Body() body: CreateCompanyDto,
-  ) {
+  create(@Body() body: CreateCompanyDto) {
     return this.service.create(body);
   }
 
@@ -132,14 +147,8 @@ export class CompanyController {
     status: 200,
     type: CompanyResponseDto,
   })
-  update(
-    @Param('id') id: string,
-    @Body() body: UpdateCompanyDto,
-  ) {
-    return this.service.update(
-      id,
-      body,
-    );
+  update(@Param('id') id: string, @Body() body: UpdateCompanyDto) {
+    return this.service.update(id, body);
   }
 
   @Delete(':id')
@@ -154,9 +163,7 @@ export class CompanyController {
     status: 200,
     description: 'Company deleted successfully',
   })
-  remove(
-    @Param('id') id: string,
-  ) {
+  remove(@Param('id') id: string) {
     return this.service.remove(id);
   }
 
@@ -168,23 +175,7 @@ export class CompanyController {
     status: 201,
     description: 'Companies imported successfully',
   })
-  bulkImport(
-    @Body() body: CreateCompanyDto[],
-  ) {
-    return this.service.bulkImport(
-      body,
-    );
-  }
-
-  @Post('refresh-logos')
-  @ApiOperation({
-    summary: 'Refresh company logos',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Logo refresh triggered',
-  })
-  refreshLogos() {
-    return this.service.refreshAllLogos();
+  bulkImport(@Body() body: CreateCompanyDto[]) {
+    return this.service.bulkImport(body);
   }
 }

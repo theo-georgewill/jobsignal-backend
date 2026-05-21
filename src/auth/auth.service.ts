@@ -7,7 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
-import {LoginDto} from './dto/login.dto';
+import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
@@ -52,10 +52,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const valid = await bcrypt.compare(
-      dto.password,
-      user.password,
-    );
+    const valid = await bcrypt.compare(dto.password, user.password);
 
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');

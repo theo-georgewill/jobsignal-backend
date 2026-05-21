@@ -7,16 +7,10 @@ import { IngestedSignal } from '../types/signals.types';
 function extractCompany(title: string): string {
   const words = title.split(' ');
 
-  const stopWords = [
-    'raises',
-    'launches',
-    'announces',
-    'introduces',
-    'hiring',
-  ];
+  const stopWords = ['raises', 'launches', 'announces', 'introduces', 'hiring'];
 
-  const index = words.findIndex(word =>
-    stopWords.includes(word.toLowerCase())
+  const index = words.findIndex((word) =>
+    stopWords.includes(word.toLowerCase()),
   );
 
   if (index > 0) {

@@ -34,9 +34,7 @@ import type { AuthenticatedRequest } from '../auth/interfaces/authenticated-requ
 @Controller('applications')
 @UseGuards(JwtAuthGuard)
 export class ApplicationsController {
-  constructor(
-    private readonly applicationsService: ApplicationsService,
-  ) {}
+  constructor(private readonly applicationsService: ApplicationsService) {}
 
   @Post()
   @ApiOperation({
@@ -46,14 +44,8 @@ export class ApplicationsController {
     status: 201,
     type: ApplicationResponseDto,
   })
-  create(
-    @Req() req: AuthenticatedRequest,
-    @Body() dto: CreateApplicationDto,
-  ) {
-    return this.applicationsService.create(
-      req.user.userId,
-      dto,
-    );
+  create(@Req() req: AuthenticatedRequest, @Body() dto: CreateApplicationDto) {
+    return this.applicationsService.create(req.user.userId, dto);
   }
 
   @Get()
@@ -64,12 +56,8 @@ export class ApplicationsController {
     status: 200,
     type: [ApplicationResponseDto],
   })
-  findAll(
-    @Req() req: AuthenticatedRequest,
-  ) {
-    return this.applicationsService.findAll(
-      req.user.userId,
-    );
+  findAll(@Req() req: AuthenticatedRequest) {
+    return this.applicationsService.findAll(req.user.userId);
   }
 
   @Get(':id')
@@ -84,9 +72,7 @@ export class ApplicationsController {
     status: 200,
     type: ApplicationResponseDto,
   })
-  findOne(
-    @Param('id') id: string,
-  ) {
+  findOne(@Param('id') id: string) {
     return this.applicationsService.findOne(id);
   }
 
@@ -102,14 +88,8 @@ export class ApplicationsController {
     status: 200,
     type: ApplicationResponseDto,
   })
-  update(
-    @Param('id') id: string,
-    @Body() dto: UpdateApplicationDto,
-  ) {
-    return this.applicationsService.update(
-      id,
-      dto,
-    );
+  update(@Param('id') id: string, @Body() dto: UpdateApplicationDto) {
+    return this.applicationsService.update(id, dto);
   }
 
   @Delete(':id')
@@ -124,9 +104,7 @@ export class ApplicationsController {
     status: 200,
     description: 'Application deleted successfully',
   })
-  remove(
-    @Param('id') id: string,
-  ) {
+  remove(@Param('id') id: string) {
     return this.applicationsService.remove(id);
   }
 }

@@ -32,9 +32,7 @@ export async function fetchTechpointSignals(): Promise<IngestionResult> {
       type: detected.type,
       title,
       companyName: detected.companyName,
-      url: link.startsWith('http')
-        ? link
-        : `https://techpoint.africa${link}`,
+      url: link.startsWith('http') ? link : `https://techpoint.africa${link}`,
       source: 'techpoint',
     });
   });
