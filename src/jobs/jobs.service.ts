@@ -34,16 +34,45 @@ export class JobsService {
       name: data.company,
     });
 
+    return this.upsertJob(
+      data,
+      company.id,
+      cleanUrl,
+    );
+ 
+  }
+
+  async createForCompany(
+    companyId: string,
+    data: CreateJobDto,
+  ) {
+    const cleanUrl = normalizeUrl(data.url);
+
+    return this.upsertJob(
+      data,
+      companyId,
+      cleanUrl,
+    );
+  }
+
+  private async upsertJob(
+    data: CreateJobDto,
+    companyId: string,
+    cleanUrl: string,
+  ) {
     const hash = this.generateHash(
       {
         ...data,
         url: cleanUrl,
       },
-      company.id,
+      companyId,
     );
 
     return this.prisma.job.upsert({
-      where: { hash },
+      where: {
+        hash,
+      },
+
       update: {
         title: data.title,
 
@@ -53,33 +82,46 @@ export class JobsService {
 
         workMode: data.workMode,
 
-        employmentType: data.employmentType,
+        employmentType:
+          data.employmentType,
 
         url: cleanUrl,
 
         source: data.source,
 
-        externalId: data.externalId,
+        externalId:
+          data.externalId,
 
-        description: data.description,
+        description:
+          data.description,
 
-        descriptionHtml: data.descriptionHtml,
+        descriptionHtml:
+          data.descriptionHtml,
 
-        salaryMin: data.salaryMin,
+        salaryMin:
+          data.salaryMin,
 
-        salaryMax: data.salaryMax,
+        salaryMax:
+          data.salaryMax,
 
-        salaryCurrency: data.salaryCurrency,
+        salaryCurrency:
+          data.salaryCurrency,
 
-        salaryPeriod: data.salaryPeriod,
+        salaryPeriod:
+          data.salaryPeriod,
 
-        tags: data.tags || [],
+        tags:
+          data.tags || [],
 
-        postedAt: data.postedAt,
+        postedAt:
+          data.postedAt,
 
-        metadata: data.metadata as Prisma.InputJsonValue,
-        companyId: company.id,
+        metadata:
+          data.metadata as Prisma.InputJsonValue,
+
+        companyId,
       },
+
       create: {
         title: data.title,
 
@@ -89,39 +131,49 @@ export class JobsService {
 
         workMode: data.workMode,
 
-        employmentType: data.employmentType,
+        employmentType:
+          data.employmentType,
 
         url: cleanUrl,
 
         source: data.source,
 
-        externalId: data.externalId,
+        externalId:
+          data.externalId,
 
-        description: data.description,
+        description:
+          data.description,
 
-        descriptionHtml: data.descriptionHtml,
+        descriptionHtml:
+          data.descriptionHtml,
 
-        salaryMin: data.salaryMin,
+        salaryMin:
+          data.salaryMin,
 
-        salaryMax: data.salaryMax,
+        salaryMax:
+          data.salaryMax,
 
-        salaryCurrency: data.salaryCurrency,
+        salaryCurrency:
+          data.salaryCurrency,
 
-        salaryPeriod: data.salaryPeriod,
+        salaryPeriod:
+          data.salaryPeriod,
 
-        tags: data.tags || [],
+        tags:
+          data.tags || [],
 
-        postedAt: data.postedAt,
+        postedAt:
+          data.postedAt,
 
-        metadata: data.metadata,
+        metadata:
+          data.metadata as Prisma.InputJsonValue,
 
-        companyId: company.id,
+        companyId,
 
         hash,
       },
     });
   }
-
   /* =========================================
      HASH (DEDUP STRATEGY)
   ========================================= */
