@@ -6,7 +6,6 @@ import { SignalsService } from '../signals/signals.service';
 
 import { IngestedJob } from './types/jobs.types';
 import { PROVIDER_REGISTRY } from './registry/provider-registry';
-import { CompanyQueue } from '../queues/company.queue';
 
 @Injectable()
 export class IngestionService implements OnModuleInit {
@@ -14,7 +13,6 @@ export class IngestionService implements OnModuleInit {
     private jobsService: JobsService,
     private prisma: PrismaService,
     private signalsService: SignalsService,
-    private companyQueue: CompanyQueue,
   ) {}
 
   /* =========================================
@@ -105,22 +103,6 @@ export class IngestionService implements OnModuleInit {
       await this.signalsService.createMany(allSignals);
 
       console.log('STEP 7: Signals created');
-
-      console.log('STEP 8: Queueing company enrichment');
-
-      const companies = await this.prisma.company.findMany({
-        select: {
-          id: true,
-        },
-      });
-
-      for (const company of companies) {
-        await this.companyQueue.enrich(company.id);
-      }
-
-      console.log(
-        `STEP 9: Queued ${companies.length} companies for enrichment`,
-      );
 
       await this.prisma.ingestionRun.update({
         where: {
