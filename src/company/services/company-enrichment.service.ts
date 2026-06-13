@@ -7,7 +7,7 @@ import {
   normalizeCompanyName,
 } from '../../common/utils/company.util';
 
-import { IngestionQueue } from '../../queues/ingestion.queue';
+import { IngestionQueue } from '../../ingestion/queues/ingestion.queue';
 
 @Injectable()
 export class CompanyEnrichmentService {
