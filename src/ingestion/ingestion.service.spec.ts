@@ -3,7 +3,7 @@ import { IngestionService } from './ingestion.service';
 import { JobsService } from '../jobs/jobs.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SignalsService } from '../signals/signals.service';
-import { CompanyQueue } from '../queues/company.queue';
+import { CompanyQueue } from './queues/company.queue';
 
 describe('IngestionService', () => {
   let service: IngestionService;

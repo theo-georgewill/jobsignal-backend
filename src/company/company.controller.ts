@@ -5,16 +5,20 @@ import {
   Patch,
   Delete,
   Param,
+  Res,
   Body,
   UseGuards,
 } from '@nestjs/common';
-
+import type { Response } from 'express';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  //ApiConsumes,
+  ApiProduces,
+  ApiBody,
 } from '@nestjs/swagger';
 
 import { CompanyService } from './company.service';
@@ -26,6 +30,8 @@ import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 
 import { CompanyResponseDto } from './dto/company-response.dto';
+import { ImportCompanyDto } from './dto/import-company.dto';
+import { ExportCompaniesDto } from './dto/export-company.dto';
 
 @ApiTags('Admin - Companies')
 @ApiBearerAuth('JWT-auth')
@@ -93,7 +99,7 @@ export class CompanyController {
 
   @Post(':id/run')
   @ApiOperation({
-    summary: 'Run company ingestion',
+    summary: 'Run single company job ingestion',
   })
   @ApiParam({
     name: 'id',
@@ -105,6 +111,28 @@ export class CompanyController {
   })
   run(@Param('id') id: string) {
     return this.service.run(id);
+  }
+
+  @Post(':id/check-careers')
+  @ApiOperation({
+    summary:
+      'Check company careers page for new jobs',
+  })
+  @ApiParam({
+    name: 'id',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Career page check triggered',
+  })
+  checkCareerPage(
+    @Param('id') id: string,
+  ) {
+    return this.service.checkCareerPage(
+      id,
+    );
   }
 
   @Get(':id')
@@ -167,15 +195,74 @@ export class CompanyController {
     return this.service.remove(id);
   }
 
-  @Post('bulk-import')
+  @Post('import')
   @ApiOperation({
     summary: 'Bulk import companies',
   })
   @ApiResponse({
     status: 201,
-    description: 'Companies imported successfully',
+    schema: {
+      example: {
+        created: 120,
+        updated: 42,
+        skipped: 5,
+        invalid: 2,
+        errors: [],
+      },
+    },
   })
-  bulkImport(@Body() body: CreateCompanyDto[]) {
-    return this.service.bulkImport(body);
+  importCompanies(@Body() body: ImportCompanyDto[]) {
+    return this.service.importCompanies(body);
+  }
+
+  @Post('export')
+  @ApiOperation({
+    summary: 'Export companies as CSV',
+  })
+  @ApiBody({
+    type: ExportCompaniesDto,
+  })
+  @ApiProduces('text/csv')
+  @ApiResponse({
+    status: 200,
+    description: 'CSV export generated',
+  })
+  async exportCompanies(
+    @Body() filters: ExportCompaniesDto,
+    @Res() res: Response,
+  ) {
+    const csv = 
+      await this.service.exportCompanies(
+        filters,
+      );
+    res.setHeader(
+      'Content-Type',
+      'text/csv',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="companies-${Date.now()}.csv"`,
+    );
+    return res.send(csv);
+  }
+  
+  @Post('backfill-canonical-names')
+  @ApiOperation({
+    summary: 'Backfill canonical names and merge duplicates',
+  })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      example: {
+        updated: 120,
+        merged: 184,
+        errors: [],
+      },
+    },
+  })
+  backfillCanonicalNames() {
+    return this.service.backfillCanonicalNames();
   }
 }
+
+

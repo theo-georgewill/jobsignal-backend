@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CompanyService } from './company.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CompanyController } from './company.controller';
-import { CompanyQueue } from '../queues/company.queue';
+import { CompanyQueue } from '../ingestion/queues/company.queue';
 
 describe('CompanyService', () => {
   let service: CompanyService;

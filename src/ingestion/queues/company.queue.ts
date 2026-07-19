@@ -9,6 +9,21 @@ export class CompanyQueue {
     private queue: Queue,
   ) {}
 
+  private getJobOptions() {
+    return {
+      attempts: 3,
+
+      backoff: {
+        type: 'exponential',
+        delay: 5000,
+      },
+
+      removeOnComplete: 1000,
+
+      removeOnFail: 5000,
+    };
+  }
+
   async enrich(companyId: string) {
     await this.queue.add(
       'enrich-company',
@@ -26,6 +41,16 @@ export class CompanyQueue {
         removeOnComplete: 1000,
         removeOnFail: 5000,
       },
+    );
+  }
+
+  async checkCareerPage(
+    companyId: string,
+  ) {
+    await this.queue.add(
+      'check-career-page',
+      { companyId },
+      this.getJobOptions(),
     );
   }
 }

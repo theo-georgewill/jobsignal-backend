@@ -3,6 +3,9 @@
 import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import {
+  normalizeCompanyName,
+} from '../../src/common/utils/company.util';
 
 const adapter = new PrismaPg({
   connectionString:
@@ -230,10 +233,15 @@ async function main() {
   for (const company of companies) {
     await prisma.company.upsert({
       where: {
-        name: company.name,
+        canonicalName:
+          normalizeCompanyName(company.name),
       },
-
       update: {
+        name: company.name,
+        canonicalName:
+          normalizeCompanyName(
+            company.name,
+          ),
         website:
           company.website,
         careersUrl:
@@ -241,13 +249,19 @@ async function main() {
         atsType:
           company.atsType,
         tags: company.tags,
+        verified: true,
+        resolutionStatus:
+          'resolved',
         enabled: true,
         healthy: true,
         priority: 1,
       },
-
       create: {
         name: company.name,
+        canonicalName:
+          normalizeCompanyName(
+            company.name,
+          ),
         website:
           company.website,
         careersUrl:
@@ -255,6 +269,9 @@ async function main() {
         atsType:
           company.atsType,
         tags: company.tags,
+        verified: true,
+        resolutionStatus:
+          'resolved',
         enabled: true,
         healthy: true,
         priority: 1,

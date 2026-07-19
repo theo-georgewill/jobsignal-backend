@@ -5,7 +5,7 @@ import { JobsController } from './jobs.controller';
 
 import { PrismaModule } from '../prisma/prisma.module';
 
-import { QueuesModule } from '../queues/queues.module';
+import { QueuesModule } from '../ingestion/queues/queues.module';
 
 import { CompanyResolutionService } from '../company/services/company-resolution.service';
 

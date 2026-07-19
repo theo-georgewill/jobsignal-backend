@@ -40,7 +40,7 @@ export class SignalsService {
           if (!processed) return;
 
           const company = await this.companyResolutionService.resolve({
-            name: processed.companyName,
+            name: signal.companyName,
           });
 
           const hash = this.generateHash(processed, processed.companyName);
@@ -129,8 +129,9 @@ export class SignalsService {
 
     return {
       ...signal,
+      normalizedCompanyName:
+        normalizedName,
       type,
-      companyName: normalizedName,
       amount,
       confidence,
       score,

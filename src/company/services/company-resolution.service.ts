@@ -1,15 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CompanyQueue } from '../../queues/company.queue';
-import { DomainDiscoveryService } from './domain-discovery.service';
 import { normalizeCompanyName } from '../../common/utils/company.util';
 
 @Injectable()
 export class CompanyResolutionService {
   constructor(
     private prisma: PrismaService,
-    private companyQueue: CompanyQueue,
-    private domainDiscoveryService: DomainDiscoveryService,
   ) {}
 
   async resolve(input: {
@@ -19,67 +15,60 @@ export class CompanyResolutionService {
     atsType?: string;
   }) {
     if (!input.name) {
-      throw new Error('Company name required');
+      throw new Error(
+        'Company name required',
+      );
     }
 
-    const normalizedName = normalizeCompanyName(input.name);
+    const normalizedName =
+      normalizeCompanyName(
+        input.name,
+      );
 
     /* =========================================
-       TRY NAME MATCH
+       TRY CANONICAL MATCH
     ========================================= */
 
-    let company = await this.prisma.company.findUnique({
-      where: {
-        name: normalizedName,
-      },
-    });
+const company =
+  await this.prisma.company.upsert({
+    where: {
+      canonicalName:
+        normalizedName,
+    },
 
-    if (company) {
-      return company;
-    }
+    update: {},
 
-    /* =========================================
-       DISCOVER DOMAIN
-    ========================================= */
+    create: {
+      name: input.name,
 
-    const website =
-      input.website ||
-      (await this.domainDiscoveryService.discover(normalizedName));
+      canonicalName:
+        normalizedName,
 
-    /* =========================================
-       MATCH BY WEBSITE
-    ========================================= */
+      website:
+        input.website ||
+        null,
 
-    if (website) {
-      company = await this.prisma.company.findFirst({
-        where: {
-          website,
-        },
-      });
+      careersUrl:
+        input.careersUrl ||
+        '',
 
-      if (company) {
-        return company;
-      }
-    }
+      atsType:
+        input.atsType ||
+        'unknown',
 
-    /* =========================================
-       CREATE COMPANY
-    ========================================= */
+      verified: false,
 
-    company = await this.prisma.company.create({
-      data: {
-        name: normalizedName,
-        website,
-        careersUrl: input.careersUrl || '',
-        atsType: input.atsType || 'unknown',
-        enabled: true,
-        healthy: true,
-        tags: [],
-      },
-    });
+      resolutionStatus:
+        'pending',
 
-    await this.companyQueue.enrich(company.id);
+      enabled: true,
 
-    return company;
+      healthy: false,
+
+      tags: [],
+    },
+  });
+
+return company;
   }
 }
