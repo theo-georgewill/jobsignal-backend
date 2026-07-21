@@ -12,6 +12,7 @@ import { CompanyModule } from './company/company.module';
 import { SignalsModule } from './signals/signals.module';
 import { OpportunitiesModule } from './opportunities/opportunities.module';
 import { BullModule } from '@nestjs/bullmq';
+import { HealthModule } from './health/health.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -35,6 +36,7 @@ import { BullModule } from '@nestjs/bullmq';
     CompanyModule,
     SignalsModule,
     OpportunitiesModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
